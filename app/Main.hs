@@ -104,6 +104,12 @@ fibswap (TTI l r) = (TIT r l)
 fibswap (TIT l r) = (TTI r l)
 fibswap (TTT l r) = (TTT r l)
 
+braid :: FibTree a (l,l') -> Q (FibTree a (l',l))
+braid (ITT l r) = [(ITT r l,  exp j * 2 * pi / 5)]  -- different scalar factors for trivial and non trivial fusion
+braid (TTI l r) = [(TIT r l,  1)] -- exchange with trivial means nothing
+braid (TIT l r) = [(TTI r l,  1)]
+braid (TTT l r) = [(TTT r l,  - exp j * 4 * pi / 5)]
+
 {-
 fibassoc :: FibTree a ((c,d),e) -> FibTree a (c,(d,e))
 fibassoc (ITT l r) = (ITT r l) 
@@ -125,6 +131,25 @@ fmove (TIT  a  (TTI b c)) = TTI ( TIT  a b) c
 -- fmove (TIT  a  (TIT b c)) = TTT ( III  a b) c 
 fmove (TIT  a  (TTT b c)) = TTT ( TIT  a b) c
 
+fmoveq :: FibTree a (c,(d,e)) -> Q (FibTree a ((c,d),e))
+-- fmove (ITT  a  (TTI b c)) = pure $ ITI ( TTT  a b) c -- pure (auto (auto a b) c) -- no maybe not. The internal one isn't auto
+fmoveq (ITT  a  (TIT b c)) = pure $ ITT ( TTI  a b) c
+fmoveq (ITT  a  (TTT b c)) = pure $ ITT ( TTT  a b) c
+
+fmoveq (TTT  a  (TTI b c)) = pure $ TTI ( TTT  a b) c
+fmoveq (TTT  a  (TIT b c)) = pure $ TTT ( TTI  a b) c 
+
+
+fmoveq (TIT  a  (TTI b c)) = pure $ TTI ( TIT  a b) c
+-- fmove (TIT  a  (TIT b c)) = TTT ( III  a b) c
+-- the nontrivial ones have all tau on the leafs and root 
+-- internal I
+fmoveq (TTI  a  (ITT b c)) = W [(TTI ( ITT  a b) c, recip tau)         , (TTT ( TTT  a b) c, recip $ sqrt tau)]
+-- internal T
+fmoveq (TTT  a  (TTT b c)) = W [(TTI ( ITT  a b) c, recip $ sqrt tau)  , (TTT ( TTT  a b) c,   - recip tau  )]
+
+
+tau = 0.618 :+ 0
 
 test1 = lmap fibswap
 test2 = lmap $ lmap fibswap
@@ -155,14 +180,17 @@ linapply f ((b,s) : xs) = smul s (f b) ++ linapply f xs
     prod = ITT
 -- etc.
 
+-- I can't make a fst. It extracts a skolemized object.
+-- So I do need to do complete pattern matching? No. I CAN do this... ? Not always clear I'd want to?
 fibfst :: AutoNode a e _ => FibTree a (b,c) -> FibTree e b
+
 
 
 -}
 class TProd a b c where
 	tprod :: Vec1 (FibTree a l) r -> Vec1 (FibTree b l') r -> Vec1 (FibTree c (l,l')) r 
 
-
+-- tprod :: AutoNode a b c => Vec1 (FibTree a l) r -> Vec1 (FibTree b l') r -> Vec1 (FibTree c (l,l')) r 
 --class Index tree n  -- reference leaf by number?
 
 -- class AutoFMove tree n 
