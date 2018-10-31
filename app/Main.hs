@@ -76,6 +76,16 @@ data FibTree (root :: a) (leaves :: b) where
    -- III :: FibTree 'Id l -> FibTree 'Id l' -> FibTree 'Id (l,l') -- maybe shouldn't exist. uneccessary. Does really help for monoidal instance
    TLeaf :: FibTree 'Tau 'Tau
 
+instance Enum (FibTree 'Tau 'Tau)
+instance Enum (FibTree 'Id 'Id)
+-- and no inhabitants types?
+--instance Enum (FibTree d b), Enum (FibTree e c) => Enum (FibTree a (b,c))
+
+instance Enum (FibTree 'Tau b), Enum (FibTree 'Tau b), Enum (FibTree 'Tau b), Enum (FibTree 'Id c) => Enum (FibTree 'Tau (b,c))
+
+--instance Enum (FibTree a (b,c)) Enum (FibTree a (b,c))=> Enum (FibTree 'Id (b,c))
+
+(FibTree a (b,c))
 
 
 type TreeFun a b c d = FibTree a b -> FibTree c d
