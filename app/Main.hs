@@ -1,12 +1,17 @@
-{-# LANGUAGE GADTs, StandaloneDeriving, ScopedTypeVariables, FlexibleInstances, DataKinds, PolyKinds, RankNTypes, ImpredicativeTypes, MultiParamTypeClasses #-}
+{-# LANGUAGE GADTs, NoImplicitPrelude, InstanceSigs, StandaloneDeriving, ScopedTypeVariables, FlexibleInstances, DataKinds, PolyKinds, RankNTypes, ImpredicativeTypes, MultiParamTypeClasses #-}
 --- 
 module Main where
 
 import Lib
 import qualified Data.Map.Strict as Map
+import Prelude hiding ((.), id)
 import Linear.Vector
 import Data.Tuple
 import Data.Complex
+import Linear.Epsilon (nearZero)
+import Control.Category
+import Control.Monad ((<=<))
+-- import Control.Arrow
 {-
 type MapVec r k = Map.Map k r
 
@@ -52,6 +57,10 @@ instance (Eq a,Show a,Num b) => Num (W b a) where
 collect :: (Ord a,Num b) => W b a -> W b a
 collect = W . Map.toList . Map.fromListWith (+) . runW
 
+trimZero = W . filter (\(k,v) -> not $ nearZero v) . runW
+simplify = trimZero . collect
+-- filter (not . nearZero . snd)
+
 type P a = W Double a
 
 type Q a = W (Complex Double) a
@@ -88,8 +97,39 @@ data FibTree root leaves where
    TLeaf :: FibTree Tau Tau
    ILeaf :: FibTree Id Id
 
+-- pretty printing would be hella nice
 deriving instance Show (FibTree a b)
 deriving instance Eq (FibTree a b)
+--deriving instance Ord (FibTree a b)
+
+
+instance Ord (FibTree a b) where
+  compare (ITT l r) (ITT l' r') | l < l' = LT
+                                | l > l' = GT
+                                | otherwise = compare r r'  
+  compare (ITT _ _) _ = LT
+  compare _ (ITT _ _) = GT
+  compare (TTI l r) (TTI l' r') | l < l' = LT
+                                | l > l' = GT
+                                | otherwise = compare r r' 
+  compare (TIT l r) (TIT l' r') | l < l' = LT
+                                | l > l' = GT
+                                | otherwise = compare r r' 
+  compare (TTT l r) (TTT l' r') | l < l' = LT
+                                | l > l' = GT
+                                | otherwise = compare r r' 
+
+  compare (TTI _ _) _ = LT
+  compare _ (TTI _ _) = GT
+  compare (TIT _ _) _ = LT
+  compare _ (TIT _ _) = GT
+  compare (TTT _ _) _ = LT
+  compare _ (TTT _ _) = GT
+  compare TLeaf TLeaf = EQ
+  compare ILeaf ILeaf = EQ
+  -- whoa. GHC is smart enough to realize some of these patterns can't happen
+  -- because of the types. 
+
 {-
 instance Enum (FibTree 'Tau (A 'Tau)) where
   toEnum _ = TLeaf
@@ -201,9 +241,9 @@ fmove (TIT  a  (TTI b c)) = pure $ TTI ( TIT  a b) c
 -- fmove (TIT  a  (TIT b c)) = TTT ( III  a b) c
 -- the nontrivial ones have all tau on the leafs and root 
 -- internal I
-fmove (TTI  a  (ITT b c)) = W [(TIT ( ITT  a b) c, recip tau)         , (TTT ( TTT  a b) c, recip $ sqrt tau)]
+fmove (TTI  a  (ITT b c)) = W [(TIT ( ITT  a b) c, tau)         , (TTT ( TTT  a b) c, sqrt tau)]
 -- internal T
-fmove (TTT  a  (TTT b c)) = W [(TIT ( ITT  a b) c, recip $ sqrt tau)  , (TTT ( TTT  a b) c,   - recip tau  )]
+fmove (TTT  a  (TTT b c)) = W [(TIT ( ITT  a b) c, sqrt tau)  ,   (TTT ( TTT  a b) c, - tau   )]
 
 -- largely just a tranpose of the above case.
 fmove' :: FibTree a ((c,d),e) -> Q (FibTree a (c,(d,e)))
@@ -226,18 +266,22 @@ fmove' (TTI ( TIT  a b) c) = pure $ TIT  a  (TTI b c)
 
 -- internal I
 
-fmove' (TIT ( ITT  a b) c) = W [(TTI  a  (ITT b c), recip tau)         , (TTT  a  (TTT b c) , recip $ sqrt tau)]
+fmove' (TIT ( ITT  a b) c) = W [(TTI  a  (ITT b c), tau)         , (TTT  a  (TTT b c) , sqrt tau)]
 --fmoveq (TTI  a  (ITT b c)) = W [(TIT ( ITT  a b) c, recip tau)         , (TTT ( TTT  a b) c, recip $ sqrt tau)]
 -- internal T
-fmove' (TTT ( TTT  a b) c) = W [(TTI  a  (ITT b c), recip $ sqrt tau)  , (TTT  a  (TTT b c),   - recip tau  )]
+fmove' (TTT ( TTT  a b) c) = W [(TTI  a  (ITT b c), sqrt tau)  , (TTT  a  (TTT b c),   - tau  )]
 
 --fmoveq (TTT  a  (TTT b c)) = W [(TIT ( ITT  a b) c, recip $ sqrt tau)  , (TTT ( TTT  a b) c,   - recip tau  )]
 
-
+checkf :: Q (FibTree Tau ((Tau, Tau),Tau))
+checkf = simplify $ fmove' (TIT (ITT TLeaf TLeaf) TLeaf) >>= fmove
+checkf' = simplify $ fmove' (TTT (TTT TLeaf TLeaf) TLeaf) >>= fmove
+-- checkf''' = fmove' (TIT (ITT TLeaf TLeaf) TLeaf)
+-- checkf'' = fmove' (ITT (TTT TLeaf TLeaf) TLeaf) >>= fmove
 
 -- tau**2 + tau == 1
 tau :: Complex Double
-tau =  (sqrt 5 - 1) / 2 :+ 0 -- 0.618 :+ 0
+tau =  ((sqrt 5) - 1) / 2 :+ 0 -- 0.618 :+ 0
 
 --test1 = lmap fibswap
 -- test2 = lmap $ lmap fibswap
@@ -380,5 +424,79 @@ test4 = [1 ~* 'a', 2 ~* 'b'] -- eh. What's the point.
 -- zero
 -- 
 
+
+-- TODOS
+
+
+-- Categorical Interface
+-- lmap, rmap vs second first.
+
+
+-- Auto F Moves. / auto braid.
+
+-- Pretty Print tree
+
+-- Operators.
+newtype FibOp a b = FibOp (forall c. FibTree c a -> Q (FibTree c b))
+type FibOp' c a b = FibTree c a -> Q (FibTree c b)
+
+instance Category FibOp where
+  id = FibOp pure
+  (FibOp f) . (FibOp g) = FibOp (f <=< g) 
+{-
+instance Arrow FibOp where
+  arr = error "No. No arr."
+  (***) = 
+-}
+{-
+class Monoidal k where
+  (***) :: k a b -> k c d -> k (a,c) (b,d)
+-}
+tensor :: Num r => (b -> c -> a) -> W r b -> W r c -> W r a
+tensor f (W xs) (W ys) =  W [ ( f x y , xc * yc ) | (x, xc) <- xs,  (y,yc) <- ys]
+
+-- tensor :: Num r => (b -> c -> a) -> b -> c -> W r a
+-- fg f g (TTT l r) = tensor TTT (f l) (g r) 
+
+{-
+instance Monoidal FibOp where
+  (***) :: FibOp a b -> FibOp c d -> FibOp (a,c) (b,d)
+  (FibOp f) *** (FibOp g) = FibOp fg where
+                               -- fg ::  (a,c) (b,d)
+                               fg :: FibTree e (a,c) -> Q (FibTree e (b,d))
+                               fg (TTT l r) = tensor TTT (f l) (g r) 
+                               -- fg (ITT l r) = FibOp $ tensor ITT (f l) (g r) 
+                               -- fg (TIT l r) = FibOp $ tensor TIT (f l) (g r) 
+-}
+-- try to remove the issue of being in a instance. Which is kind of silly anyhow
+{-
+(****) :: FibOp' e a b -> FibOp' e c d -> FibOp' e (a,c) (b,d)
+f **** g = fg where
+                   -- fg ::  (a,c) (b,d)
+                 fg :: FibTree e (a,c) -> Q (FibTree e (b,d))
+                 fg (TTT l r) = tensor TTT (f l) (g r)
+                 fg (ITT l r) = tensor ITT (f l) (g r)
+-}
+(***) :: (forall e. FibOp' e a b) -> (forall e'. FibOp' e' c d)  -> FibOp' e'' (a,c) (b,d)
+(***) f g (TTT l r) = tensor TTT (f l) (g r)
+(***) f g (ITT l r) = tensor ITT (f l) (g r)
+(***) f g (TIT l r) = tensor TIT (f l) (g r)
+
+
+first = lmap
+second = rmap
+-- Is the problem that I'd trying to pattern match on kind of the output?
+ -- densification
+
+-- Quickcheck props
+
+-- implement qubit abtraction
+
+-- Did I fall into a way to make end, co-end work as einstein notation?6
+-- The bounded meaning of forall and exists in the GADT context
+
 main :: IO ()
 main = someFunc
+
+
+
