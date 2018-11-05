@@ -1,4 +1,8 @@
-{-# LANGUAGE GADTs, NoImplicitPrelude, InstanceSigs, StandaloneDeriving, ScopedTypeVariables, FlexibleInstances, DataKinds, PolyKinds, RankNTypes, ImpredicativeTypes, MultiParamTypeClasses #-}
+{-# LANGUAGE GADTs, NoImplicitPrelude, TypeFamilies,
+InstanceSigs, StandaloneDeriving, UndecidableInstances,
+ScopedTypeVariables, FlexibleInstances, DataKinds,
+FunctionalDependencies, PolyKinds, 
+TypeOperators, RankNTypes, ImpredicativeTypes, MultiParamTypeClasses #-}
 --- 
 module Main where
 
@@ -11,6 +15,7 @@ import Data.Complex
 import Linear.Epsilon (nearZero)
 import Control.Category
 import Control.Monad ((<=<))
+import GHC.TypeNats
 -- import Control.Arrow
 {-
 type MapVec r k = Map.Map k r
@@ -431,8 +436,53 @@ test4 = [1 ~* 'a', 2 ~* 'b'] -- eh. What's the point.
 -- Categorical Interface
 -- lmap, rmap vs second first.
 
+{-
+pullLeft (Tau,x) = (Tau,x)
+pullLeft (Id,x) = (Id,x)
+pullLeft (a,b) = fmove ((a',c),b) where (a',c) = pullLeft a  
+-- ((a,b),c) = (, (b,c)) where (a',d) = pullLeft a
+-}
+{-
+type family FMove' a where
+  FMove' ((a,b),c)  = (a,(b,c))
+
+type family PullLeft a where
+  PullLeft Tau = Tau
+  PullLeft Id = Id
+  PullLeft (Tau,b) = (Tau,b)
+  PullLeft (Id,b) =  (Id,b)
+  PullLeft ((a,b),c)  = FMove' (PullLeft (a,b), c)
 
 -- Auto F Moves. / auto braid.
+
+pullLeft :: (PullLeft (b,c) ~ (b',c')) => FibTree a (b,c) -> Q (FibTree a (b',c'))
+pullLeft x@(TTT TLeaf _) = pure x
+pullLeft (TTT l@(TTT _ _ ) r) =  do 
+                      l' <- pullLeft l
+                      fmove' (TTT l' r)
+-}
+class PullLeft a b | a -> b where
+  pullLeft :: FibTree c a -> Q (FibTree c b)
+
+instance PullLeft (Tau,c) (Tau,c) where
+  pullLeft = pure
+
+instance PullLeft (a,b) (a',b') => PullLeft ((a, b),c) (a',(b',c)) where
+  pullLeft (TTT l r) =  do 
+                        l' <- pullLeft l
+                        fmove' (TTT l' r)
+
+type family Count a where
+  Count Tau = 1
+  Count Id = 1
+  Count (a,b) = (Count a) + (Count b)
+
+class LCA n a b c d | n a c -> b d where
+  lcamap :: (forall a. FibTree (a :: *) b -> Q (FibTree a c)) -> (FibTree e a) -> Q (FibTree e d))
+-- auto braid
+-- find least common ancestor
+-- pullLeft, and pullRight
+-- then braid
 
 -- Pretty Print tree
 
@@ -482,9 +532,14 @@ f **** g = fg where
 (***) f g (ITT l r) = tensor ITT (f l) (g r)
 (***) f g (TIT l r) = tensor TIT (f l) (g r)
 
-
 first = lmap
 second = rmap
+-- braid
+-- fmove
+
+-- cup, cap? dot'
+
+
 -- Is the problem that I'd trying to pattern match on kind of the output?
  -- densification
 
