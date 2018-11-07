@@ -2,7 +2,8 @@
 InstanceSigs, StandaloneDeriving, UndecidableInstances,
 ScopedTypeVariables, FlexibleInstances, DataKinds,
 FunctionalDependencies, PolyKinds, 
-TypeOperators, RankNTypes, ImpredicativeTypes, MultiParamTypeClasses #-}
+TypeOperators, RankNTypes, ImpredicativeTypes, MultiParamTypeClasses,
+AllowAmbiguousTypes, TypeApplications #-}
 --- 
 module Main where
 
@@ -461,24 +462,89 @@ pullLeft (TTT l@(TTT _ _ ) r) =  do
                       l' <- pullLeft l
                       fmove' (TTT l' r)
 -}
-class PullLeft a b | a -> b where
+class PullLeft a b | a -> b where -- | a -> b functional dependency causes errors?
   pullLeft :: FibTree c a -> Q (FibTree c b)
-
+{-
 instance PullLeft (Tau,c) (Tau,c) where
   pullLeft = pure
 
-instance PullLeft (a,b) (a',b') => PullLeft ((a, b),c) (a',(b',c)) where
-  pullLeft (TTT l r) =  do 
+instance PullLeft (Id,c) (Id,c) where
+  pullLeft = pure
+-}
+
+instance PullLeft Tau Tau where
+  pullLeft = pure
+
+instance PullLeft Id Id where
+  pullLeft = pure
+
+instance (PullLeft (a,b) (a',b'), r ~ (a',(b',c))) => PullLeft ((a, b),c) r where
+	pullLeft t = do 
+		       t' <- lmap pullLeft t
+		       fmove' t'
+{-  pullLeft (TTT l r) =  do 
                         l' <- pullLeft l
                         fmove' (TTT l' r)
+-}
+instance (PullLeft a a', r ~ (a',(b,c))) => PullLeft (a, (b,c)) r where
+  pullLeft t = lmap pullLeft t
 
 type family Count a where
   Count Tau = 1
   Count Id = 1
   Count (a,b) = (Count a) + (Count b)
 
-class LCA n a b c d | n a c -> b d where
-  lcamap :: (forall a. FibTree (a :: *) b -> Q (FibTree a c)) -> (FibTree e a) -> Q (FibTree e d))
+type family LeftCount a where
+	LeftCount (a,b) = Count a
+
+-- The version without the explicit ordering supplied.
+class LCA' n a b c d | n a c -> b d where
+  lcamap' :: (forall r. FibTree r b -> Q (FibTree r c)) -> (FibTree e a) -> Q (FibTree e d)
+
+instance (lc ~ (LeftCount a), LCA n lc a b c d) => LCA' n a b c d where
+  lcamap' f x = lcamap @n @lc f x
+
+class LCA n gte a b c d | n gte a c -> b d where
+  lcamap :: (forall r. FibTree r b -> Q (FibTree r c)) -> (FibTree e a) -> Q (FibTree e d)
+
+-- we find b at the lca and pass it back up. c gets passed all the way down, d gets computed by rebuilding out of c.
+-- a drives the search.
+instance (n' ~ (n - Count l), -- we're searching in the right subtree. Subtract the leaf number in the left subtree
+	      lc ~ (LeftCount r), -- dip one left down to order which way we have to go next
+	      gte ~ (CmpNat lc n'), -- Do we go left, right or havce we arrived in the next layer?
+	      LCA n' gte r b c d',  -- recurive call
+	      d ~ (l,d') -- reconstruct total return type from recurive return type. left tree is unaffected by lcamapping
+	      ) => LCA n 'LT (l,r) b c d where
+    lcamap f x = rmap (lcamap @n' @gte f) x
+
+instance (lc ~ (LeftCount l),
+	      gte ~ (CmpNat lc n),
+          LCA n gte l b c d',
+          d ~ (d',r)
+          ) => LCA n 'GT (l,r) b c d where
+    lcamap f x = lmap (lcamap @n @gte f) x
+
+instance (b ~ a, d ~ c) => LCA n 'EQ a b c d where
+	lcamap f x = f x
+
+
+-- need one last arbitrary left or right fmove to put the two on the same stalk
+-- neighbormap :: (LCA n a (l,r) (l',r') d, PullRight l (l',x), PullLeft r (y,r') ) => (FibTree.  -> Q FibTree) -> FibTree 
+{-
+-- neighbormap f z = lcamap @n (\x -> do 
+                            x' <- lmap pullRight x
+                            x'' <- rmap pullLeft x'
+                            x''' <- fmove x''
+                            lmap? f x'''   ) z
+-}
+
+-- autobraid = neighbormap braid
+-- autodot x = neighbormap (dot x)
+
+
+-- Build state monad to carry along the vector.
+-- should be able to do in applicative style, since data does not change structre of computation
+
 -- auto braid
 -- find least common ancestor
 -- pullLeft, and pullRight
