@@ -3,7 +3,7 @@ InstanceSigs, StandaloneDeriving, UndecidableInstances,
 ScopedTypeVariables, FlexibleInstances, DataKinds,
 FunctionalDependencies, PolyKinds, 
 TypeOperators, RankNTypes, ImpredicativeTypes, MultiParamTypeClasses,
-AllowAmbiguousTypes, TypeApplications #-}
+AllowAmbiguousTypes, TypeApplications, FlexibleContexts #-}
 --- 
 module Main where
 
@@ -17,6 +17,7 @@ import Linear.Epsilon (nearZero)
 import Control.Category
 import Control.Monad ((<=<))
 import GHC.TypeNats
+import Data.Proxy
 -- import Control.Arrow
 {-
 type MapVec r k = Map.Map k r
@@ -464,30 +465,56 @@ pullLeft (TTT l@(TTT _ _ ) r) =  do
 -}
 class PullLeft a b | a -> b where -- | a -> b functional dependency causes errors?
   pullLeft :: FibTree c a -> Q (FibTree c b)
-{-
+
 instance PullLeft (Tau,c) (Tau,c) where
   pullLeft = pure
 
 instance PullLeft (Id,c) (Id,c) where
   pullLeft = pure
--}
 
+{-
 instance PullLeft Tau Tau where
   pullLeft = pure
 
 instance PullLeft Id Id where
   pullLeft = pure
-
+-}
 instance (PullLeft (a,b) (a',b'), r ~ (a',(b',c))) => PullLeft ((a, b),c) r where
 	pullLeft t = do 
 		       t' <- lmap pullLeft t
 		       fmove' t'
+{-
+instance (PullLeft a a', r ~ (a',(b,c))) => PullLeft (a, (b,c)) r where
+  pullLeft t = lmap pullLeft t
+-}
+{-
+instance (PullLeft a a', PullLeft (a',b) (a'',b''), ) => PullLeft (a,b) r where
+  pullLeft = lmap pullLeft t
+-}
+
 {-  pullLeft (TTT l r) =  do 
                         l' <- pullLeft l
                         fmove' (TTT l' r)
 -}
-instance (PullLeft a a', r ~ (a',(b,c))) => PullLeft (a, (b,c)) r where
-  pullLeft t = lmap pullLeft t
+
+class PullRight a b | a -> b where -- | a -> b functional dependency causes errors?
+  pullRight :: FibTree c a -> Q (FibTree c b)
+{-
+instance (PullRight a a', r ~ ((b,c),a')) => PullRight ((b,c),a) r where
+  pullRight t = rmap pullRight t
+-}
+instance PullRight (Tau,c) (Tau,c) where
+  pullRight = pure
+
+instance PullRight (Id,c) (Id,c) where
+  pullRight = pure
+
+instance (PullRight (a,b) (a',b'), r ~ ((c,a'),b')) => PullRight (c,(a, b)) r where
+  pullRight t = do 
+           t' <- rmap pullRight t
+           fmove t'
+
+
 
 type family Count a where
   Count Tau = 1
@@ -498,38 +525,93 @@ type family LeftCount a where
 	LeftCount (a,b) = Count a
 
 -- The version without the explicit ordering supplied.
-class LCA' n a b c d | n a c -> b d where
-  lcamap' :: (forall r. FibTree r b -> Q (FibTree r c)) -> (FibTree e a) -> Q (FibTree e d)
-
-instance (lc ~ (LeftCount a), LCA n lc a b c d) => LCA' n a b c d where
-  lcamap' f x = lcamap @n @lc f x
-
-class LCA n gte a b c d | n gte a c -> b d where
+class LCA n a b c d | n a c -> b d where
   lcamap :: (forall r. FibTree r b -> Q (FibTree r c)) -> (FibTree e a) -> Q (FibTree e d)
+{-
+lcamapP :: LCA n a b c d => Proxy n ->  (forall r. FibTree r b -> Q (FibTree r c)) -> (FibTree e a) -> Q (FibTree e d)
+lcamapP _ f x = lcamap f x
+-}
+instance (lc ~ (LeftCount a), 
+          gte ~ (CmpNat lc n),
+         LCA' n gte a b c d) => LCA n a b c d where
+  lcamap f x = lcamap' @n @gte f x
+
+class LCA' n gte a b c d | n gte a c -> b d where
+  lcamap' :: (forall r. FibTree r b -> Q (FibTree r c)) -> (FibTree e a) -> Q (FibTree e d)
 
 -- we find b at the lca and pass it back up. c gets passed all the way down, d gets computed by rebuilding out of c.
 -- a drives the search.
 instance (n' ~ (n - Count l), -- we're searching in the right subtree. Subtract the leaf number in the left subtree
 	      lc ~ (LeftCount r), -- dip one left down to order which way we have to go next
 	      gte ~ (CmpNat lc n'), -- Do we go left, right or havce we arrived in the next layer?
-	      LCA n' gte r b c d',  -- recurive call
+	      LCA' n' gte r b c d',  -- recurive call
 	      d ~ (l,d') -- reconstruct total return type from recurive return type. left tree is unaffected by lcamapping
-	      ) => LCA n 'LT (l,r) b c d where
-    lcamap f x = rmap (lcamap @n' @gte f) x
+	      ) => LCA' n 'LT (l,r) b c d where
+    lcamap' f x = rmap (lcamap' @n' @gte f) x
 
 instance (lc ~ (LeftCount l),
-	      gte ~ (CmpNat lc n),
-          LCA n gte l b c d',
+	        gte ~ (CmpNat lc n),
+          LCA' n gte l b c d',
           d ~ (d',r)
-          ) => LCA n 'GT (l,r) b c d where
-    lcamap f x = lmap (lcamap @n @gte f) x
+          ) => LCA' n 'GT (l,r) b c d where
+    lcamap' f x = lmap (lcamap' @n @gte f) x
 
-instance (b ~ a, d ~ c) => LCA n 'EQ a b c d where
-	lcamap f x = f x
+instance (b ~ a, d ~ c) => LCA' n 'EQ a b c d where
+	lcamap' f x = f x
+
+
 
 
 -- need one last arbitrary left or right fmove to put the two on the same stalk
 -- neighbormap :: (LCA n a (l,r) (l',r') d, PullRight l (l',x), PullLeft r (y,r') ) => (FibTree.  -> Q FibTree) -> FibTree 
+
+neighbormap :: forall n a b c d l l' r' x y e r z. (LCA n a b c d,
+   b ~ (l,r),
+   c ~ ((l',z),r'), 
+   PullRight l (l',x),
+   PullLeft r (y,r')) => 
+   (forall r. FibTree r (x,y) -> Q (FibTree r z)) -> FibTree e a -> Q (FibTree e d)
+neighbormap f z = lcamap @n @a @b @c @d (helper f) z
+
+helper ::  (c ~ ((l',z),r'), 
+   PullRight l (l',x),
+   PullLeft r (y,r')) => (forall r. FibTree r (x,y) -> Q (FibTree r z)) -> FibTree e (l,r) -> Q (FibTree e c)
+helper f x = do
+            x' <- rootneighbor x
+            lmap (rmap f) x'                          
+
+rootneighbor :: (PullRight l (l',x), PullLeft r (y,r')) => FibTree e (l,r) -> Q (FibTree e ((l',(x,y)),r'))
+rootneighbor x = do 
+                x' <- lmap pullRight x
+                x'' <- rmap pullLeft x' -- ((l',x),(y,r'))
+                x''' <- fmove x'' -- (((l',x),y),r')
+                lmap fmove' x''' -- ((l',(x,y)),r')
+
+
+t1 = neighbormap @2 braid (TTT (TTI TLeaf ILeaf) (TTT TLeaf TLeaf)) 
+
+                                      {-
+neighbormap p f z = let helper (x :: FibTree _ (l,r)) = do
+                                x' <- rootneighbor x
+                                lmap (rmap f) x'
+                    in
+                    lcamap helper z
+                    -}
+{-  lcamap 
+((\x -> do
+                                x' <- rootneighbor x
+                                lmap (rmap f) x'
+                                ) :: (forall s. FibTree s (l,r) -> Q (FibTree s c))) z
+-}
+
+{-(\x -> do 
+                            x' <- lmap pullRight x
+                            x'' <- rmap pullLeft x' -- ((l',x),(y,r'))
+                            x''' <- fmove x'' -- (((l',x),y),r')
+                            x4 <- lmap fmove' x''' -- ((l',(x,y)),r')
+                            lmap (lmap f) x4 -- ((l',z),r')
+                            ) z
+-}                         
 {-
 -- neighbormap f z = lcamap @n (\x -> do 
                             x' <- lmap pullRight x
