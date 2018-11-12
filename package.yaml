@@ -37,6 +37,8 @@ executables:
     - mapvec
     - containers
     - linear
+    - ansi-wl-pprint
+    - boxes
 
 tests:
   mapvec-test:

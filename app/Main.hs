@@ -18,6 +18,8 @@ import Control.Category
 import Control.Monad ((<=<))
 import GHC.TypeNats
 import Data.Proxy
+-- import qualified Text.PrettyPrint.ANSI.Leijen as PP
+import qualified Text.PrettyPrint.Boxes as B
 -- import Control.Arrow
 {-
 type MapVec r k = Map.Map k r
@@ -45,7 +47,9 @@ instance Functor (W b) where
 
 instance Num b => Applicative (W b) where
   pure x = W [(x,1)]
-  x <*> y = error "I don't feel like it"
+  (W fs) <*> (W xs) = W [(f x, a * b) | (f, a) <- fs, (x, b) <- xs] 
+  -- the fs is a a vector of rows kind of.
+    -- error "I don't feel like it"
 
 instance Num b => Monad (W b) where
    return x = W [(x,1)]
@@ -105,10 +109,78 @@ data FibTree root leaves where
    ILeaf :: FibTree Id Id
 
 -- pretty printing would be hella nice
-deriving instance Show (FibTree a b)
+--deriving instance Show (FibTree a b)
+
+instance Show (FibTree a b) where
+  show = drawTree
 deriving instance Eq (FibTree a b)
 --deriving instance Ord (FibTree a b)
+{-
+r = PP.text "\\"
+l = PP.text "/"
+ls = PP.group $ (PP.text "  /" <> PP.line <> PP.text " /" <> PP.line <>PP.text "/")
+rs = PP.group $ (PP.text "\\" <> PP.line <> PP.text " \\" <> PP.line <>PP.text "  \\")
+-}
 
+sp = B.char ' '
+l = B.char '/'
+r = B.char '\\'
+h = B.char '-'
+v = B.char '|'
+t = B.char 'T'
+i = B.char 'I'
+rs x =  (r  B.<> sp B.<> sp) B.//
+      (sp B.<> r  B.<> x) B.//
+      (sp B.<> sp  B.<> r)
+ls x =  (sp  B.<> sp B.<> l) B.//
+      (x B.<> l  B.<> sp) B.//
+      (l B.<> sp  B.<> sp)
+
+
+{-
+drawty = v B.// v B.// v B.// (h B.<> h B.<> h B.<> h)
+drawb :: FibTree a b -> B.Box
+drawb ILeaf = i
+drawb TLeaf = t
+drawb (TTT l r) = (drawb l) B.vcat   B.// ((drawb r)  B.<> v )
+-}
+-- PP.nest 2 l <> PP.line <> PP.nest 1 l <> PP.line <> l
+-- text "Tau \\"
+-- text "Id \\"
+
+-- From Data.Tree
+
+draw :: FibTree a b -> [String]
+draw (ITT l r) = "I" : drawSubTrees (l,r)
+draw (TIT l r) = "T" : drawSubTrees (l,r)
+draw (TTT l r) = "T" : drawSubTrees (l,r)
+draw (TTI l r) = "T" : drawSubTrees (l,r)
+draw  ILeaf    = "I" : []
+draw  TLeaf    = "T" : []
+
+-- drawSubTrees' [] = []
+drawSubTrees' t =
+    "|" : shift "`- " "   " (draw t)
+drawSubTrees (t,ts) =
+    "|" : shift "+- " "|  " (draw t) ++ drawSubTrees' ts
+
+shift first other = zipWith (++) (first : repeat other)
+
+{-
+draw' ILeaf = ["I"]
+draw' TLeaf = ["T"]
+draw' (TTT l r) =  " -" ++ ((fmap . fmap) (\s -> s ++ "  |") (draw' l)) ++ (["-+"] ++ draw' r))
+-}
+-- drawex = drawb (TTT (TTT TLeaf TLeaf) TLeaf)
+
+
+-- | Neat 2-dimensional drawing of a tree.
+drawTree :: FibTree a b -> String
+drawTree  = unlines . draw
+
+-- | Neat 2-dimensional drawing of a forest.
+-- drawForest :: Forest String -> String
+-- drawForest  = unlines . map drawTree
 
 instance Ord (FibTree a b) where
   compare (ITT l r) (ITT l' r') | l < l' = LT
@@ -206,6 +278,7 @@ braid (TIT l r) = W [(TTI r l,  1)]
 braid (TTT l r) = W [(TTT r l,  - (cis $ 4 * pi / 5))]
 
 -- The inverse of braid
+braid' :: FibTree a (l,l') -> Q (FibTree a (l',l))
 braid' = star . braid
 
 -- property 
@@ -472,13 +545,13 @@ instance PullLeft (Tau,c) (Tau,c) where
 instance PullLeft (Id,c) (Id,c) where
   pullLeft = pure
 
-{-
+
 instance PullLeft Tau Tau where
   pullLeft = pure
 
 instance PullLeft Id Id where
   pullLeft = pure
--}
+
 instance (PullLeft (a,b) (a',b'), r ~ (a',(b',c))) => PullLeft ((a, b),c) r where
 	pullLeft t = do 
 		       t' <- lmap pullLeft t
@@ -503,10 +576,17 @@ class PullRight a b | a -> b where -- | a -> b functional dependency causes erro
 instance (PullRight a a', r ~ ((b,c),a')) => PullRight ((b,c),a) r where
   pullRight t = rmap pullRight t
 -}
-instance PullRight (Tau,c) (Tau,c) where
+instance PullRight Tau Tau where
   pullRight = pure
 
-instance PullRight (Id,c) (Id,c) where
+instance PullRight Id Id where
+  pullRight = pure
+
+
+instance PullRight (c,Tau) (c,Tau) where
+  pullRight = pure
+
+instance PullRight (c,Id) (c,Id) where
   pullRight = pure
 
 instance (PullRight (a,b) (a',b'), r ~ ((c,a'),b')) => PullRight (c,(a, b)) r where
@@ -561,9 +641,79 @@ instance (b ~ a, d ~ c) => LCA' n 'EQ a b c d where
 
 
 
+class LeafMap n gte a b c d | n gte a c -> b d where
+  leafmap :: (forall r. FibTree r b -> Q (FibTree r c)) -> (FibTree e a) -> Q (FibTree e d)
 
+instance (n' ~ (n - Count l), -- we're searching in the right subtree. Subtract the leaf number in the left subtree
+        lc ~ (LeftCount r), -- dip one left down to order which way we have to go next
+        gte ~ (CmpNat lc n'), -- Do we go left, right or havce we arrived in the next layer?
+        LeafMap n' gte r b c d',  -- recurive call
+        d ~ (l,d') -- reconstruct total return type from recurive return type. left tree is unaffected by lcamapping
+        ) => LeafMap n 'LT (l,r) b c d where
+    leafmap f x = rmap (leafmap @n' @gte f) x
+
+instance (lc ~ (LeftCount l),
+          gte ~ (CmpNat lc n),
+          LeafMap n gte l b c d',
+          d ~ (d',r)
+          ) => LeafMap n 'GT (l,r) b c d where
+    leafmap f x = lmap (leafmap @n @gte f) x
+
+-- In the equals case, we now continue onward.
+instance (lc ~ (LeftCount l),
+          gte ~ (CmpNat lc n),
+          LeafMap n gte l b c d',
+          d ~ (d',r)
+          ) => LeafMap n 'EQ (l,r) b c d where
+    leafmap f x = lmap (leafmap @n @gte f) x
+
+-- base case
+instance (b ~ Tau, d ~ c) => LeafMap 1 'EQ Tau b c d where
+  leafmap f x = f x
+
+instance (b ~ Id, d ~ c) => LeafMap 1 'EQ Id b c d where
+  leafmap f x = f x
+
+-- split
+-- leafmap @3 (const (TTT TLeaf TLeaf)) 
 -- need one last arbitrary left or right fmove to put the two on the same stalk
 -- neighbormap :: (LCA n a (l,r) (l',r') d, PullRight l (l',x), PullLeft r (y,r') ) => (FibTree.  -> Q FibTree) -> FibTree 
+
+-- I need this to also work for (Tau, Tau)
+-- (Tau, yada yada)
+-- I.e. I need to do different things depending on 
+
+
+-- Jesus. What a shitshow. But I don't see how to do better.
+-- a is starting tree
+-- b is extracted part
+-- c is transformed b
+-- d is recoustrcted a replacing b with c and rearranging.
+class NeighborMap a b c d | a c -> b d where
+  nmap :: (forall r. FibTree r b -> Q (FibTree r c)) -> FibTree e a -> Q (FibTree e d)
+
+instance NeighborMap ((l,x),(y,r)) (x,y) c ((l,c),r) where
+   nmap f x = do
+              x'  <- fmove x -- (((l',x),y),r')
+              x'' <- lmap fmove' x' -- ((l',(x,y)),r')
+              lmap (rmap f) x''
+instance NeighborMap (Tau, (y,r)) (Tau, y)  c  (c,r) where
+   nmap f x = fmove x >>= lmap f
+instance NeighborMap (Id, (y,r)) (Id, y) c (c,r) where
+   nmap f x = fmove x >>= lmap f
+instance NeighborMap ((l,x), Tau) (x,Tau) c (l,c) where
+   nmap f x = fmove' x >>= rmap f
+instance NeighborMap ((l,x), Id) (x,Id) c  (l,c) where
+   nmap f x = fmove' x >>= rmap f
+instance NeighborMap (Tau, Tau) (Tau,Tau) c  c where
+   nmap f x = f x 
+instance NeighborMap (Id, Id) (Id,Id) c  c where
+   nmap f x = f x 
+instance NeighborMap (Tau, Id) (Tau,Id) c  c where
+   nmap f x = f x 
+instance NeighborMap (Id, Tau) (Id,Tau) c  c where
+   nmap f x = f x 
+
 
 neighbormap :: forall n a b c d l l' r' x y e r z. (LCA n a b c d,
    b ~ (l,r),
@@ -587,8 +737,36 @@ rootneighbor x = do
                 x''' <- fmove x'' -- (((l',x),y),r')
                 lmap fmove' x''' -- ((l',(x,y)),r')
 
+neighbormap' :: forall n a b c d l l' r r' x y e z b'. (LCA n a b c d,
+   b ~ (l,r),
+   -- c ~ c',
+   -- c ~ ((l',z),r'), 
+   PullRight l l',
+   PullLeft r r',
+   NeighborMap (l',r') b' z c) => 
+   (forall r. FibTree r b' -> Q (FibTree r z)) -> FibTree e a -> Q (FibTree e d)
+neighbormap' f z = lcamap @n @a @b @c @d (\x -> do
+                                          x'  <- lmap pullRight x
+                                          x'' <- rmap pullLeft x' 
+                                          nmap f x'') z
 
-t1 = neighbormap @2 braid (TTT (TTI TLeaf ILeaf) (TTT TLeaf TLeaf)) 
+neighbormap'' :: forall n a b' z d c l l' r r' x y e b. (LCA n a b c d,
+   b ~ (l,r),
+   -- c ~ c',
+   -- c ~ ((l',z),r'), 
+   PullRight l l',
+   PullLeft r r',
+   NeighborMap (l',r') b' z c) => 
+   (forall r. FibTree r b' -> Q (FibTree r z)) -> FibTree e a -> Q (FibTree e d)
+neighbormap'' f z = lcamap @n @a @b @c @d (\x -> do
+                                          x'  <- lmap pullRight x
+                                          x'' <- rmap pullLeft x' 
+                                          nmap f x'') z
+
+
+t1 = neighbormap' @2 braid (TTT (TTI TLeaf ILeaf) (TTT TLeaf TLeaf)) 
+t2 = neighbormap' @1 braid (TTT (TTI TLeaf ILeaf) (TTT TLeaf TLeaf)) 
+t3 = neighbormap' @2 braid (TTT (TTT (TTT TLeaf TLeaf) TLeaf) (TTT TLeaf TLeaf)) 
 
                                       {-
 neighbormap p f z = let helper (x :: FibTree _ (l,r)) = do
@@ -619,7 +797,116 @@ neighbormap p f z = let helper (x :: FibTree _ (l,r)) = do
                             x''' <- fmove x''
                             lmap? f x'''   ) z
 -}
+{-
+abraid :: forall n a b c d l l' r' x y e r z b'. (LCA n a b c d,
+   b ~ (l,r),
+   -- c ~ c',
+   -- c ~ ((l',z),r'), 
+   PullRight l l',
+   PullLeft r r',
+   NeighborMap (l',r') (x,y) (y,x) c) => Q (FibTree e a) -> Q (FibTree e d)
 
+
+   -}
+
+abraid :: forall n a b c d l l' r r' x y e z b'. (LCA n a b c d,
+   b ~ (l,r),
+   -- c ~ c',
+   -- c ~ ((l',z),r'), 
+   PullRight l l',
+   PullLeft r r',
+   NeighborMap (l',r') (x,y) (y,x) c) => 
+   Q (FibTree e a) -> Q (FibTree e d)
+abraid x = x >>= (neighbormap' @n @a @b @c @d @l @l' @r @r' @x @y @e @(y,x) @(x,y)) braid
+
+abraid' :: forall n a b c d l l' r r' x y e z b'. (LCA n a b c d,
+   b ~ (l,r),
+   -- c ~ c',
+   -- c ~ ((l',z),r'), 
+   PullRight l l',
+   PullLeft r r',
+   NeighborMap (l',r') (x,y) (y,x) c) => 
+   Q (FibTree e a) -> Q (FibTree e d)
+abraid' x = x >>= (neighbormap' @n @a @b @c @d @l @l' @r @r' @x @y @e @(y,x) @(x,y)) braid'
+
+
+
+{-
+abraid
+  :: forall n a b c d l l' r r' x y e z b'. (LCA n a (l, r) c d, PullRight l l', PullLeft r r',
+      NeighborMap (l', r') (x, y) (y, x) c) =>
+     (FibTree e a) -> Q (FibTree e d)
+abraid x = neighbormap' @n @a @(l,r) @c @d @l @l' @r @r' braid x
+-}
+{-
+t4 = abraid @2 $
+     abraid @4 $
+     abraid @3 $
+     pure (TTT (TTT (TTT TLeaf TLeaf) TLeaf) (TTT TLeaf TLeaf)) 
+-}
+{-
+ndot' :: forall n a b c d l l' r r' x y e z b' a'. (LCA n a b c d,
+   b ~ (l,r),
+   -- c ~ c',
+   -- c ~ ((l',z),r'), 
+   PullRight l l',
+   PullLeft r r',
+   NeighborMap (l',r') (x,y) a' c) => 
+   FibTree a' (x,y) -> FibTree e a -> Q (FibTree e d)
+   -}
+-- ndot' x = (neighbormap' @n @a @b @c @d @l @l' @r @r' @x @y @e @a' @(x,y)) (dot' x)
+
+ndot :: forall n a l r c d l' r' x y a' e. (LCA n a (l, r) c d, PullRight l l', PullLeft r r',
+      NeighborMap (l', r') (x, y) a' c) =>
+     FibTree a' (x, y) -> FibTree e a -> Q (FibTree e d) 
+ndot x = neighbormap' @n @a @(l,r) (dot' x)
+
+-- This a b c d pattern is something like a lens. We are replacing 
+-- piece of b with c which turns a into d. b is piece of a.
+-- s t a b
+
+-- quantified constraints
+--  (forall b' c'. (g a b' c' d , f b' b c c') => Compose f g a b c d
+
+
+
+
+
+-- (forall r. FibTree r b' -> Q (FibTree r z)) ->
+{-
+abraid' :: forall n a b c d l l' r r' x y e b'. (LCA n a b c d,
+   b ~ (l,r),
+   -- c ~ c',
+   -- c ~ ((l',z),r'), 
+   PullRight l l',
+   PullLeft r r',
+   NeighborMap (l',r') (x,y) (y,x) c) => 
+   FibTree e a -> Q (FibTree e d)
+abraid' = (neighbormap'' @n @a @(x,y) @(y,x) @d) braid
+-}
+
+
+
+{-
+abraid' :: forall n a b c d l l' r r' x y e z b'. (LCA n a b c d,
+   b ~ (l,r),
+   -- c ~ c',
+   -- c ~ ((l',z),r'), 
+   PullRight l l',
+   PullLeft r r',
+   NeighborMap (l',r') (x,y) (y,x) c) => 
+   FibTree e a -> Q (FibTree e d)
+abraid' = (neighbormap' @n @a @b @c @d @l @l' @r @r' @x @y @e @(y,x) @(x,y)) braid'
+-}
+
+
+
+{-
+abraid :: (LCA n a (l1, r) c d, PullRight l1 l'1, PullLeft r r',
+      NeighborMap (l'1, r') (l2, l'2) (l'2, l2) c) =>
+     FibTree e a -> Q (FibTree e d)
+abraid = neighbormap' braid
+-}
 -- autobraid = neighbormap braid
 -- autodot x = neighbormap (dot x)
 
@@ -632,7 +919,13 @@ neighbormap p f z = let helper (x :: FibTree _ (l,r)) = do
 -- pullLeft, and pullRight
 -- then braid
 
+
+-- stateful 
 -- Pretty Print tree
+
+
+
+
 
 -- Operators.
 newtype FibOp a b = FibOp (forall c. FibTree c a -> Q (FibTree c b))
