@@ -95,15 +95,17 @@ There are two types of particles
 -}
 data FibAnyon = Id | Tau
 -- I started using DataKinds and it ended up being a problem.
-data Tau
-data Id
+
 data A a 
 
+data Tau
+data Id
 data FibTree root leaves where
-   ITT :: FibTree Tau l -> FibTree Tau l' -> FibTree Id (l,l') -- we would like to enforce that isingany can split into a b, but thisis tough
-   TTI :: FibTree Tau l -> FibTree Id l' -> FibTree Tau (l,l')
-   TIT :: FibTree Id l -> FibTree Tau l' -> FibTree Tau (l,l')
-   TTT :: FibTree Tau l -> FibTree Tau l' -> FibTree Tau (l,l')
+   TTT :: FibTree Tau l -> FibTree Tau r -> FibTree Tau (l,r)
+   ITT :: FibTree Tau l -> FibTree Tau r -> FibTree Id (l,r) -- we would like to enforce that isingany can split into a b, but thisis tough
+   TIT :: FibTree Id l -> FibTree Tau r -> FibTree Tau (l,r)
+   TTI :: FibTree Tau l -> FibTree Id r -> FibTree Tau (l,r)
+   III :: FibTree Id l -> FibTree Id r -> FibTree Id (l,r)
    -- III :: FibTree 'Id l -> FibTree 'Id l' -> FibTree 'Id (l,l') -- maybe shouldn't exist. uneccessary. Does really help for monoidal instance
    TLeaf :: FibTree Tau Tau
    ILeaf :: FibTree Id Id
@@ -249,6 +251,7 @@ lmap f (ITT l r) = fmap (\l' -> ITT l' r) (f l)
 lmap f (TTI l r) = fmap (\l' -> TTI l' r) (f l)
 lmap f (TIT l r) = fmap (\l' -> TIT l' r) (f l)
 lmap f (TTT l r) = fmap (\l' -> TTT l' r) (f l)
+lmap f (III l r) = fmap (\l' -> III l' r) (f l)
 {-
 rmap :: (forall a. FibTree a b -> FibTree a c) -> (forall e. FibTree e (d,b) -> FibTree e (d,c)) --  forall (a :: FibAnyon). 
 rmap f (ITT l r) = ITT l (f r)
@@ -256,11 +259,12 @@ rmap f (TTI l r) = TTI l (f r)
 rmap f (TIT l r) = TIT l (f r)
 rmap f (TTT l r) = TTT l (f r)
 -}
-rmap :: (forall a. FibTree (a :: *) b -> Q (FibTree a c)) -> (FibTree e (d,b) -> Q (FibTree e (d,c)))
+rmap :: (forall a. FibTree a b -> Q (FibTree a c)) -> (FibTree e (d,b) -> Q (FibTree e (d,c)))
 rmap f (ITT l r) = fmap (\r' -> ITT l r') (f r)
 rmap f (TTI l r) = fmap (\r' -> TTI l r') (f r)
 rmap f (TIT l r) = fmap (\r' -> TIT l r') (f r)
 rmap f (TTT l r) = fmap (\r' -> TTT l r') (f r)
+rmap f (III l r) = fmap (\r' -> III l r') (f r)
 
 
 fibswap :: FibTree a (l,l') -> FibTree a (l',l)
@@ -271,14 +275,15 @@ fibswap (TTT l r) = (TTT r l)
 
 eye = 0 :+ 1
 
-braid :: FibTree a (l,l') -> Q (FibTree a (l',l))
+braid :: FibTree a (l,r) -> Q (FibTree a (r,l))
 braid (ITT l r) = W [(ITT r l,  cis $ 2 * pi / 5)]  -- different scalar factors for trivial and non trivial fusion
-braid (TTI l r) = W [(TIT r l,  1)] -- exchange with trivial means nothing
-braid (TIT l r) = W [(TTI r l,  1)]
 braid (TTT l r) = W [(TTT r l,  - (cis $ 4 * pi / 5))]
+braid (TTI l r) = pure $ TIT r l-- exchange with trivial means nothing
+braid (TIT l r) = pure $ TTI r l
+braid (III l r) = pure $ III r l
 
 -- The inverse of braid
-braid' :: FibTree a (l,l') -> Q (FibTree a (l',l))
+braid' :: FibTree a (l,r) -> Q (FibTree a (r,l))
 braid' = star . braid
 
 -- property 
@@ -312,18 +317,26 @@ fmove :: FibTree a (c,(d,e)) -> Q (FibTree a ((c,d),e))
 -- fmove (ITT  a  (TTI b c)) = pure $ ITI ( TTT  a b) c -- pure (auto (auto a b) c) -- no maybe not. The internal one isn't auto
 fmove (ITT  a  (TIT b c)) = pure $ ITT ( TTI  a b) c
 fmove (ITT  a  (TTT b c)) = pure $ ITT ( TTT  a b) c
+fmove (ITT  a  (TTI b c)) = pure $ III ( ITT  a b) c
 
 fmove (TTT  a  (TTI b c)) = pure $ TTI ( TTT  a b) c
 fmove (TTT  a  (TIT b c)) = pure $ TTT ( TTI  a b) c 
 
-
+fmove (TIT  a  (TTT b c)) = pure $ TTT ( TIT  a b) c
 fmove (TIT  a  (TTI b c)) = pure $ TTI ( TIT  a b) c
+fmove (TIT  a  (TIT b c)) = pure $ TIT ( III  a b) c
+
 -- fmove (TIT  a  (TIT b c)) = TTT ( III  a b) c
 -- the nontrivial ones have all tau on the leafs and root 
 -- internal I
 fmove (TTI  a  (ITT b c)) = W [(TIT ( ITT  a b) c, tau)         , (TTT ( TTT  a b) c, sqrt tau)]
 -- internal T
 fmove (TTT  a  (TTT b c)) = W [(TIT ( ITT  a b) c, sqrt tau)  ,   (TTT ( TTT  a b) c, - tau   )]
+
+
+fmove (III  a  (ITT b c)) = pure $ ITT ( TIT  a b) c
+fmove (III  a  (III b c)) = pure $ III ( III  a b) c
+fmove (TTI  a  (III b c)) = pure $ TTI ( TTI  a b) c
 
 -- largely just a tranpose of the above case.
 fmove' :: FibTree a ((c,d),e) -> Q (FibTree a (c,(d,e)))
@@ -389,18 +402,23 @@ dTTI :: FibTree a (Tau, Id) -> Q (FibTree a Tau) -- A dual tree of type  'tau (t
 dTTI (TTI _ _) =  pure TLeaf
 dTTI _ = mempty
 
-dTTT'''' = dot' (TTT TLeaf TLeaf)
+dTTT'''' = dot (TTT TLeaf TLeaf)
 -- I could do this as a typeclass. NOPE. don't need that garbage
 
 -- I think that incompatible FibTree a' a is empty by default vs unconstructible
 -- which is better?
-dot' :: FibTree a (b, c) -> FibTree a' (b, c) -> Q (FibTree a' a)
-dot' x@(TTI _ _) y@(TTI _ _) | x == y = pure TLeaf
+dot :: FibTree a (b, c) -> FibTree a' (b, c) -> Q (FibTree a' a)
+dot x@(TTI _ _) y@(TTI _ _) | x == y = pure TLeaf
                              | otherwise = mempty
-dot' x@(TTT _ _) y@(TTT _ _) | x == y = pure TLeaf
+dot x@(TIT _ _) y@(TIT _ _) | x == y = pure TLeaf
                              | otherwise = mempty
-dot' (ITT _ _) (ITT _ _) = pure ILeaf
-dot' _ _ = mempty 
+dot x@(TTT _ _) y@(TTT _ _) | x == y = pure TLeaf
+                            | otherwise = mempty
+dot x@(III _ _) y@(III _ _) | x == y = pure ILeaf
+                            | otherwise = mempty
+dot x@(ITT _ _) y@(ITT _ _) | x == y = pure ILeaf
+                            | otherwise = mempty
+dot _ _ = mempty 
 
 test5 = (pure $ TTT TLeaf TLeaf) >>= dTTT
 test6 = (pure $ ITT TLeaf TLeaf) >>= dTTT
@@ -420,10 +438,10 @@ dTTT'' f = undefined
 
 -- sort of similar to bind in a way. lift function to a Q function
 -- (Q FibTree a ) -> (FibTree a -> Q FibTree b)  -> Q FibTree b
-dot :: (FibTree a b -> Complex Double) -> Q (FibTree a b) -> Complex Double
-dot f (W v) = sum $ map (\(e,a) -> a * (f e)) v
+dot' :: (FibTree a b -> Complex Double) -> Q (FibTree a b) -> Complex Double
+dot' f (W v) = sum $ map (\(e,a) -> a * (f e)) v
 
-dTTT''' = dot . dTTT''
+dTTT''' = dot' . dTTT''
 
 
 pentagon1 ::  FibTree a (e,(d,(c,b))) -> Q (FibTree a (((e,d),c),b))
@@ -859,7 +877,7 @@ ndot' :: forall n a b c d l l' r r' x y e z b' a'. (LCA n a b c d,
 ndot :: forall n a l r c d l' r' x y a' e. (LCA n a (l, r) c d, PullRight l l', PullLeft r r',
       NeighborMap (l', r') (x, y) a' c) =>
      FibTree a' (x, y) -> FibTree e a -> Q (FibTree e d) 
-ndot x = neighbormap' @n @a @(l,r) (dot' x)
+ndot x = neighbormap' @n @a @(l,r) (dot x)
 
 -- This a b c d pattern is something like a lens. We are replacing 
 -- piece of b with c which turns a into d. b is piece of a.
