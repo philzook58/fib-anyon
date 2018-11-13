@@ -65,10 +65,11 @@ instance (Eq a,Show a,Num b) => Num (W b a) where
      signum _ = error "Num is annoying"
      fromInteger a = if a==0 then W [] else error "fromInteger can only take zero argument"
 
-collect :: (Ord a,Num b) => W b a -> W b a
+collect :: (Ord a, Num b) => W b a -> W b a
 collect = W . Map.toList . Map.fromListWith (+) . runW
 
 trimZero = W . filter (\(k,v) -> not $ nearZero v) . runW
+simplify :: Ord a => Q a -> Q a
 simplify = trimZero . collect
 -- filter (not . nearZero . snd)
 
@@ -199,6 +200,9 @@ instance Ord (FibTree a b) where
   compare (TTT l r) (TTT l' r') | l < l' = LT
                                 | l > l' = GT
                                 | otherwise = compare r r' 
+  compare (III l r) (III l' r') | l < l' = LT
+                                | l > l' = GT
+                                | otherwise = compare r r' 
 
   compare (TTI _ _) _ = LT
   compare _ (TTI _ _) = GT
@@ -206,6 +210,8 @@ instance Ord (FibTree a b) where
   compare _ (TIT _ _) = GT
   compare (TTT _ _) _ = LT
   compare _ (TTT _ _) = GT
+  compare (III _ _) _ = LT
+  compare _ (III _ _) = GT
   compare TLeaf TLeaf = EQ
   compare ILeaf ILeaf = EQ
   -- whoa. GHC is smart enough to realize some of these patterns can't happen
@@ -276,8 +282,8 @@ fibswap (TTT l r) = (TTT r l)
 eye = 0 :+ 1
 
 braid :: FibTree a (l,r) -> Q (FibTree a (r,l))
-braid (ITT l r) = W [(ITT r l,  cis $ 2 * pi / 5)]  -- different scalar factors for trivial and non trivial fusion
-braid (TTT l r) = W [(TTT r l,  - (cis $ 4 * pi / 5))]
+braid (ITT l r) = W [(ITT r l,  cis $ 4 * pi / 5)]  -- different scalar factors for trivial and non trivial fusion
+braid (TTT l r) = W [(TTT r l,  (cis $ - 3 * pi / 5))]
 braid (TTI l r) = pure $ TIT r l-- exchange with trivial means nothing
 braid (TIT l r) = pure $ TTI r l
 braid (III l r) = pure $ III r l
@@ -319,8 +325,7 @@ fmove (ITT  a  (TIT b c)) = pure $ ITT ( TTI  a b) c
 fmove (ITT  a  (TTT b c)) = pure $ ITT ( TTT  a b) c
 fmove (ITT  a  (TTI b c)) = pure $ III ( ITT  a b) c
 
-fmove (TTT  a  (TTI b c)) = pure $ TTI ( TTT  a b) c
-fmove (TTT  a  (TIT b c)) = pure $ TTT ( TTI  a b) c 
+
 
 fmove (TIT  a  (TTT b c)) = pure $ TTT ( TIT  a b) c
 fmove (TIT  a  (TTI b c)) = pure $ TTI ( TIT  a b) c
@@ -329,40 +334,53 @@ fmove (TIT  a  (TIT b c)) = pure $ TIT ( III  a b) c
 -- fmove (TIT  a  (TIT b c)) = TTT ( III  a b) c
 -- the nontrivial ones have all tau on the leafs and root 
 -- internal I
+fmove (TTI  a  (III b c)) = pure $ TTI ( TTI  a b) c
 fmove (TTI  a  (ITT b c)) = W [(TIT ( ITT  a b) c, tau)         , (TTT ( TTT  a b) c, sqrt tau)]
 -- internal T
 fmove (TTT  a  (TTT b c)) = W [(TIT ( ITT  a b) c, sqrt tau)  ,   (TTT ( TTT  a b) c, - tau   )]
-
+fmove (TTT  a  (TTI b c)) = pure $ TTI ( TTT  a b) c
+fmove (TTT  a  (TIT b c)) = pure $ TTT ( TTI  a b) c 
 
 fmove (III  a  (ITT b c)) = pure $ ITT ( TIT  a b) c
 fmove (III  a  (III b c)) = pure $ III ( III  a b) c
-fmove (TTI  a  (III b c)) = pure $ TTI ( TTI  a b) c
+
 
 -- largely just a tranpose of the above case.
 fmove' :: FibTree a ((c,d),e) -> Q (FibTree a (c,(d,e)))
 fmove' (ITT ( TTI  a b) c) = pure $ (ITT  a  (TIT b c))
---fmoveq (ITT  a  (TIT b c)) = pure $ ITT ( TTI  a b) c
-
 fmove' (ITT ( TTT  a b) c) = pure $  (ITT  a  (TTT b c))
+fmove' (ITT ( TIT  a b) c) = pure $  (III  a  (ITT b c))
+
 --fmoveq (ITT  a  (TTT b c)) = pure $ 
 
 fmove' (TTI ( TTT  a b) c) = pure $ (TTT  a  (TTI b c))
+fmove' (TTI ( TTI  a b) c) = pure $ (TTI  a  (III b c))
+fmove' (TTI ( TIT  a b) c) = pure $ TIT  a  (TTI b c)
 --fmoveq (TTT  a  (TTI b c)) = pure $ TTI ( TTT  a b) c
 
-fmove' (TTT ( TTI  a b) c ) = pure $ TTT  a  (TIT b c)
---fmoveq (TTT  a  (TIT b c)) = pure $ TTT ( TTI  a b) c 
 
-fmove' (TTI ( TIT  a b) c) = pure $ TIT  a  (TTI b c)
+
+--fmoveq (TTT  a  (TIT b c)) = pure $ TTT ( TTI  a b) c 
+fmove' (TIT ( ITT  a b) c) = W [(TTI  a  (ITT b c), tau)         , (TTT  a  (TTT b c) , sqrt tau)]
+fmove' (TIT ( III  a b) c ) = pure $ TIT  a  (TIT b c)
+
+
+fmove' (TTT ( TTI  a b) c ) = pure $ TTT  a  (TIT b c)
+fmove' (TTT ( TIT  a b) c ) = pure $ TIT  a  (TTT b c)
+fmove' (TTT ( TTT  a b) c) = W [(TTI  a  (ITT b c), sqrt tau)  , (TTT  a  (TTT b c),   - tau  )]
+
+fmove' (III ( III  a b) c ) = pure $ III  a  (III b c)
+fmove' (III ( ITT  a b) c ) = pure $ ITT  a  (TTI b c)
+
 --fmoveq (TIT  a  (TTI b c)) = pure $ TTI ( TIT  a b) c
 -- fmove (TIT  a  (TIT b c)) = TTT ( III  a b) c
 -- the nontrivial ones have all tau on the leafs and root 
 
 -- internal I
 
-fmove' (TIT ( ITT  a b) c) = W [(TTI  a  (ITT b c), tau)         , (TTT  a  (TTT b c) , sqrt tau)]
+
 --fmoveq (TTI  a  (ITT b c)) = W [(TIT ( ITT  a b) c, recip tau)         , (TTT ( TTT  a b) c, recip $ sqrt tau)]
 -- internal T
-fmove' (TTT ( TTT  a b) c) = W [(TTI  a  (ITT b c), sqrt tau)  , (TTT  a  (TTT b c),   - tau  )]
 
 --fmoveq (TTT  a  (TTT b c)) = W [(TIT ( ITT  a b) c, recip $ sqrt tau)  , (TTT ( TTT  a b) c,   - recip tau  )]
 
@@ -456,6 +474,12 @@ pentagon2 v = do
                 v2 :: FibTree a ((b,(c,d)),e) <- fmove v1
                 lmap fmove v2
 
+
+ex1 = TTT TLeaf (TTT TLeaf (TTT TLeaf TLeaf))
+ex3 = TTT TLeaf (TTI TLeaf (ITT TLeaf TLeaf))
+pentagon =  simplify $ ((pentagon1 ex1) - (pentagon2 ex1))
+pentagon' =  simplify $ ((pentagon1 ex3) - (pentagon2 ex3))
+
 hexagon1 :: FibTree a (b,(c,d)) -> Q (FibTree a ((d,b),c))
 hexagon1 v = do
              v1 :: FibTree a ((b,c),d) <- fmove v
@@ -467,6 +491,11 @@ hexagon2 v = do
              v1 :: FibTree a (b,(d,c)) <- rmap braid v
              v2 :: FibTree a ((b,d),c) <- fmove v1
              lmap braid v2  
+
+ex2 = (TTT TLeaf (TTT TLeaf TLeaf))
+ex4 = (TTI TLeaf (ITT TLeaf TLeaf))
+hexagon =  simplify $ ((hexagon1 ex2) - (hexagon2 ex2))
+hexagon' =  simplify $ ((hexagon1 ex4) - (hexagon2 ex4))
 
 -- hexagon2 :: FibTree a (b,(c,d)) -> Q (FibTree a (c,(d,b)))
 
@@ -571,9 +600,9 @@ instance PullLeft Id Id where
   pullLeft = pure
 
 instance (PullLeft (a,b) (a',b'), r ~ (a',(b',c))) => PullLeft ((a, b),c) r where
-	pullLeft t = do 
-		       t' <- lmap pullLeft t
-		       fmove' t'
+  pullLeft t = do 
+           t' <- lmap pullLeft t
+           fmove' t'
 {-
 instance (PullLeft a a', r ~ (a',(b,c))) => PullLeft (a, (b,c)) r where
   pullLeft t = lmap pullLeft t
@@ -620,7 +649,7 @@ type family Count a where
   Count (a,b) = (Count a) + (Count b)
 
 type family LeftCount a where
-	LeftCount (a,b) = Count a
+  LeftCount (a,b) = Count a
 
 -- The version without the explicit ordering supplied.
 class LCA n a b c d | n a c -> b d where
@@ -640,22 +669,22 @@ class LCA' n gte a b c d | n gte a c -> b d where
 -- we find b at the lca and pass it back up. c gets passed all the way down, d gets computed by rebuilding out of c.
 -- a drives the search.
 instance (n' ~ (n - Count l), -- we're searching in the right subtree. Subtract the leaf number in the left subtree
-	      lc ~ (LeftCount r), -- dip one left down to order which way we have to go next
-	      gte ~ (CmpNat lc n'), -- Do we go left, right or havce we arrived in the next layer?
-	      LCA' n' gte r b c d',  -- recurive call
-	      d ~ (l,d') -- reconstruct total return type from recurive return type. left tree is unaffected by lcamapping
-	      ) => LCA' n 'LT (l,r) b c d where
+        lc ~ (LeftCount r), -- dip one left down to order which way we have to go next
+        gte ~ (CmpNat lc n'), -- Do we go left, right or havce we arrived in the next layer?
+        LCA' n' gte r b c d',  -- recurive call
+        d ~ (l,d') -- reconstruct total return type from recurive return type. left tree is unaffected by lcamapping
+        ) => LCA' n 'LT (l,r) b c d where
     lcamap' f x = rmap (lcamap' @n' @gte f) x
 
 instance (lc ~ (LeftCount l),
-	        gte ~ (CmpNat lc n),
+          gte ~ (CmpNat lc n),
           LCA' n gte l b c d',
           d ~ (d',r)
           ) => LCA' n 'GT (l,r) b c d where
     lcamap' f x = lmap (lcamap' @n @gte f) x
 
 instance (b ~ a, d ~ c) => LCA' n 'EQ a b c d where
-	lcamap' f x = f x
+  lcamap' f x = f x
 
 
 
