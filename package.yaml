@@ -1,4 +1,4 @@
-name:                mapvec
+name:                fib-anyon
 version:             0.1.0.0
 github:              "githubuser/mapvec"
 license:             BSD3
@@ -24,9 +24,12 @@ dependencies:
 
 library:
   source-dirs: src
+  dependencies:
+  - containers
+  - linear
 
 executables:
-  mapvec-exe:
+  fib-anyon-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -34,14 +37,14 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - mapvec
+    - fib-anyon
     - containers
     - linear
     - ansi-wl-pprint
     - boxes
 
 tests:
-  mapvec-test:
+  fib-anyon-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -49,4 +52,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - mapvec
+    - fib-anyon

@@ -7,7 +7,7 @@ AllowAmbiguousTypes, TypeApplications, FlexibleContexts #-}
 --- 
 module Main where
 
-import Lib
+
 import qualified Data.Map.Strict as Map
 import Prelude hiding ((.), id)
 import Linear.Vector
@@ -158,6 +158,7 @@ draw (ITT l r) = "I" : drawSubTrees (l,r)
 draw (TIT l r) = "T" : drawSubTrees (l,r)
 draw (TTT l r) = "T" : drawSubTrees (l,r)
 draw (TTI l r) = "T" : drawSubTrees (l,r)
+draw (III l r) = "I" : drawSubTrees (l,r)
 draw  ILeaf    = "I" : []
 draw  TLeaf    = "T" : []
 
@@ -475,8 +476,9 @@ pentagon2 v = do
                 lmap fmove v2
 
 
-ex1 = TTT TLeaf (TTT TLeaf (TTT TLeaf TLeaf))
+
 ex3 = TTT TLeaf (TTI TLeaf (ITT TLeaf TLeaf))
+ex1 = TTT TLeaf (TTT TLeaf (TTT TLeaf TLeaf))
 pentagon =  simplify $ ((pentagon1 ex1) - (pentagon2 ex1))
 pentagon' =  simplify $ ((pentagon1 ex3) - (pentagon2 ex3))
 
@@ -492,8 +494,9 @@ hexagon2 v = do
              v2 :: FibTree a ((b,d),c) <- fmove v1
              lmap braid v2  
 
-ex2 = (TTT TLeaf (TTT TLeaf TLeaf))
+
 ex4 = (TTI TLeaf (ITT TLeaf TLeaf))
+ex2 = (TTT TLeaf (TTT TLeaf TLeaf))
 hexagon =  simplify $ ((hexagon1 ex2) - (hexagon2 ex2))
 hexagon' =  simplify $ ((hexagon1 ex4) - (hexagon2 ex4))
 
@@ -1039,7 +1042,7 @@ second = rmap
 -- The bounded meaning of forall and exists in the GADT context
 
 main :: IO ()
-main = someFunc
+main = return ()
 
 
 
