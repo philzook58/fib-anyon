@@ -3,13 +3,16 @@
 ScopedTypeVariables, FlexibleInstances, DataKinds,
 FunctionalDependencies, PolyKinds, 
 TypeOperators, RankNTypes,  MultiParamTypeClasses,
- TypeApplications, FlexibleContexts #-}
+ TypeApplications, FlexibleContexts, AllowAmbiguousTypes #-}
 -- AllowAmbiguousTypes, ImpredicativeTypes, InstanceSigs, NoImplicitPrelude,
 
 module Fib where
 
 import Vec
 import Data.Complex
+import Control.Monad  ((<=<))
+import GHC.TypeNats
+import Data.Proxy
 
 
 -- data FibAnyon = Id | Tau
@@ -157,6 +160,152 @@ dot x@(ITT _ _) y@(ITT _ _) | x == y = pure ILeaf
 dot _ _ = mempty 
 
 
+
+
+-- Resulting type depends on input
+-- I think a typefamily type computation might be necessary? 
+-- pullLeft and pullRight might not need a type class.
+-- pullLeft (TTT l r) = fmove (TTT pl r)
+--                         where pl = pullLeft l
+{-
+type family Assoc a where
+   Assoc ((a,b),c) = (a,(b,c))
+
+type family PullLeft a where
+   PullLeft ((a,b),c) = Assoc (PullLeft (a, b), c)
+   PullLeft a = a 
+
+
+type Test1 = PullLeft (((Int,Int),Int),Int)
+pullLeft :: forall a b c. (c ~ PullLeft b) => FibTree a b -> Q (FibTree a c)
+pullLeft TLeaf = pure Tleaf
+pullLeft ILeaf = pure ILeaf
+pullLeft t =  do 
+            t' <- lmap pullLeft t
+            fmove' t'
+
+
+pullLeft t@(ITT l r) = helper t
+pullLeft t@(TTT l r) = helper t
+pullLeft t@(TTI l r) = helper t
+pullLeft t@(TIT l r) = helper t
+pullLeft t@(III l r) = helper t where
+                       helper :: (d ~ PullLeft (b,c)) => FibTree a (b,c) -> Q (FibTree a d)
+                       helper t = do 
+                                t' <- lmap pullLeft t
+                                fmove' t'
+
+-}
+
+
+{-
+Spiritually this function is this. Can't write it this way unforturnately
+-- There are typing problems
+-- this isn't even right
+-- we need to pattern match on ((),)
+pullLeft TLeaf = pure Tleaf
+pullLeft ILeaf = pure ILeaf
+pullLeft t =  do 
+                t' <- lmap pullLeft t
+                fmove' t'
+
+-- but actually a two level tree desctruct
+--treeDestruct()
+
+-}
+{-
+type family Assoc a where
+    Assoc ((a,b),c) = (a,(b,c))
+ 
+ type family PullLeft' a where
+    PullLeft' ((a,b),c) = Assoc (PullLeft' (a, b), c)
+    PullLeft' a = a 
+    -}
+-- could seperate the typeclass so that I'm using type families instead.
+
+class PullLeftLeaf a b | a -> b where 
+  pullLeftLeaf :: FibTree c a -> Q (FibTree c b)
+instance PullLeftLeaf (Tau,c) (Tau,c) where
+  pullLeftLeaf = pure
+instance PullLeftLeaf (Id,c) (Id,c) where
+  pullLeftLeaf = pure
+instance PullLeftLeaf Tau Tau where
+  pullLeftLeaf = pure
+instance PullLeftLeaf Id Id where
+  pullLeftLeaf = pure
+instance (PullLeftLeaf (a,b) (a',b'), 
+          r ~ (a',(b',c))) => PullLeftLeaf ((a, b),c) r where
+  pullLeftLeaf t = do 
+           t' <- lmap pullLeftLeaf t
+           fmove' t'
+
+
+class RightAssoc a b | a -> b where -- | a -> b functional dependency causes errors?
+  rightAssoc :: FibTree c a -> Q (FibTree c b)
+instance RightAssoc Tau Tau where
+  rightAssoc = pure
+instance RightAssoc Id Id where
+  rightAssoc = pure
+instance (PullLeftLeaf (a,b) (a',b'),
+          RightAssoc b' b'',
+          r ~ (a', b'')) => RightAssoc (a,b) r where
+  rightAssoc t = do 
+           t' <- pullLeftLeaf t
+           rmap rightAssoc t'
+-- usually you'll want to force not the root, but the leaves to be some type
+-- hence the ordering b c d a for type application
+bmove :: forall b c d a. FibTree a (b,(c,d)) -> Q (FibTree a (c,(b,d)))
+bmove t = do
+           t'  :: FibTree a ((b,c),d) <- fmove t
+           t'' :: FibTree a ((c,b),d) <-  lmap braid t'
+           fmove' t'' 
+bmove' :: forall b c d a. FibTree a (b,(c,d)) -> Q (FibTree a (c,(b,d)))
+bmove' = fmove' <=< (lmap braid') <=< fmove
+
+-- Therei s a general pattern for digging into
+-- n and a tell us b, the subpiece of a
+-- c and a and n tell use what a looks like with b replaced = d
+class RMapN n a b c d | n a c -> b d where
+    rmapN :: (forall r. FibTree r b -> Q (FibTree r c)) -> (FibTree e a) -> Q (FibTree e d)
+instance (b ~ a, c ~ d) => RMapN 0 a b c d where
+    rmapN f t = f t -- rmapN = id
+instance (RMapN (n-1) a' b c d', d ~ (a,d')) => RMapN n (a,a') b c d where
+    rmapN f t = rmap (rmapN @(n-1) f) t
+
+bmoveN :: forall n a b c d e f. RMapN n a (b, (c, d)) (c, (b, d)) e => FibTree f a -> Q (FibTree f e)
+bmoveN t = rmapN @n (bmove @b @c @d) t
+
+-- dotN :: forall n a b c d e f. dot :: FibTree a (b, c) -> FibTree a' (b, c) -> Q (FibTree a' a)
+fuseN :: forall n a b c d e f g. RMapN n f (b,(c,d)) (a,d) g => FibTree a (b, c) -> FibTree e f -> Q (FibTree e g)
+fuseN q t = rmapN @n f t where
+    f :: forall r. FibTree r (b,(c,d)) -> Q (FibTree r (a,d))
+    f t' = do 
+            t'' <- fmove t'
+            lmap (dot q) t''
+-- I should use neighbormap for this.
+-- maybe I should call f fuse and make it global?
+
+-- bmoveN t = rmapN @n (bmove :: forall r. FibTree r (b,(c,d)) -> Q (FibTree r (c,(b,d)))) t
+-- bmoveN t = rmapN @n @a @(b, (c, d)) @(c, (b, d)) @e bmove t
+
+
+{-
+bmoveN :: forall n a b c d e f. RMapN n a (b, (c, d)) (c, (b, d)) e => Proxy n -> FibTree f a -> Q (FibTree f e)
+bmoveN p t = rmapN p (bmove :: FibTree a (b,(c,d)) -> Q (FibTree a (c,(b,d)))) t
+-}
+   {- do
+            t'  <- fmove t
+            t'' <-  lmap braid' t'
+            fmove' t'' 
+-}
+
+           -- 
+{-
+pullLeftLeaf
+pullRightLeaf
+
+
+-}
 {-
 class Standardize a b | a -> b where
     standardize :: FibTree c a -> Q (FibTree c b)
@@ -187,28 +336,6 @@ lcamap f n t@(TTT l r) | count l == n  = f t
                        | count l < n   = lcamap f (n - count l) r
                        | otherwise     = lcamap f n l   
 
--- Resulting type depends on input
--- I think a typefamily type computation might be necessary? 
--- pullLeft and pullRight might not need a type class.
-pullLeft (TTT l r) = fmove (TTT pl r)
-                        where pl = pullLeft l
-
-type family Assoc where
-   Assoc ((a,b),c) = (a,(b,c))
-
-type family PullLeft where
-   PullLeft (a,b) = Assoc (PullLeft a, b)
-   PullLeft a = a 
-
-pullLeftLeaf
-pullRightLeaf
-
-pullLeft :: (c ~ PullLeft b) => FibTree a b -> Q (FibTree a c)
-pullLeft TLeaf = pure Tleaf
-pullleft ILeaf = pure ILeaf
-pullLeft t = do 
-    t' <- lmap pullLeft t
-    fmove' t'
 
 pullRight ()
 
