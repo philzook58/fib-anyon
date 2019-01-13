@@ -240,7 +240,31 @@ instance (PullLeftLeaf (a,b) (a',b'),
            fmove' t'
 
 
-class RightAssoc a b | a -> b where -- | a -> b functional dependency causes errors?
+class PullRightLeaf a b | a -> b where -- | a -> b functional dependency causes errors?
+    pullRightLeaf :: FibTree c a -> Q (FibTree c b)
+{-
+instance (PullRightLeaf a a', r ~ ((b,c),a')) => PullRightLeaf ((b,c),a) r where
+pullRightLeaf t = rmap pullRightLeaf t
+-}
+instance PullRightLeaf Tau Tau where
+    pullRightLeaf = pure
+
+instance PullRightLeaf Id Id where
+    pullRightLeaf = pure
+
+
+instance PullRightLeaf (c,Tau) (c,Tau) where
+    pullRightLeaf = pure
+
+instance PullRightLeaf (c,Id) (c,Id) where
+    pullRightLeaf = pure
+
+instance (PullRightLeaf (a,b) (a',b'), r ~ ((c,a'),b')) => PullRightLeaf (c,(a, b)) r where
+    pullRightLeaf t = do 
+        t' <- rmap pullRightLeaf t
+        fmove t'
+
+class RightAssoc a b | a -> b where 
   rightAssoc :: FibTree c a -> Q (FibTree c b)
 instance RightAssoc Tau Tau where
   rightAssoc = pure
@@ -265,13 +289,20 @@ bmove' = fmove' <=< (lmap braid') <=< fmove
 -- Therei s a general pattern for digging into
 -- n and a tell us b, the subpiece of a
 -- c and a and n tell use what a looks like with b replaced = d
-class RMapN n a b c d | n a c -> b d where
-    rmapN :: (forall r. FibTree r b -> Q (FibTree r c)) -> (FibTree e a) -> Q (FibTree e d)
-instance (b ~ a, c ~ d) => RMapN 0 a b c d where
-    rmapN f t = f t -- rmapN = id
-instance (RMapN (n-1) a' b c d', d ~ (a,d')) => RMapN n (a,a') b c d where
-    rmapN f t = rmap (rmapN @(n-1) f) t
+--data Nat = Z | S Nat
 
+rmapN :: forall n gte s t a b e. (RMapN n gte s t a b, gte ~ (CmpNat n 0)) => (forall r. FibTree r a -> Q (FibTree r b)) -> (FibTree e s) -> Q (FibTree e t)
+rmapN f t = rmapN' @n @gte f t
+
+class RMapN n gte s t a b | n gte s b -> a t where
+    rmapN' :: (forall r. FibTree r a -> Q (FibTree r b)) -> (FibTree e s) -> Q (FibTree e t)
+instance (a ~ s, b ~ t) => RMapN 0 'EQ s t a b where
+    rmapN' f t = f t -- rmapN = id
+instance (RMapN (n-1) gte r r' a b, 
+               gte ~ (CmpNat (n-1) 0),
+               t ~ (l,r')) => RMapN n 'GT (l,r) t a b where
+    rmapN' f t = rmap (rmapN @(n-1) f) t
+{-
 bmoveN :: forall n a b c d e f. RMapN n a (b, (c, d)) (c, (b, d)) e => FibTree f a -> Q (FibTree f e)
 bmoveN t = rmapN @n (bmove @b @c @d) t
 
@@ -282,6 +313,111 @@ fuseN q t = rmapN @n f t where
     f t' = do 
             t'' <- fmove t'
             lmap (dot q) t''
+-}
+
+type family Count a where
+    Count Tau = 1
+    Count Id = 1
+    Count (a,b) = (Count a) + (Count b)
+    
+type family LeftCount a where
+    LeftCount (a,b) = Count a
+
+lcamap ::  forall n s t a b e gte .
+           (gte ~ CmpNat (LeftCount s) n,
+           LCAMap n gte s t a b)
+           => (forall r. FibTree r a -> Q (FibTree r b)) -> (FibTree e s) -> Q (FibTree e t)
+lcamap f t = lcamap' @n @gte f t
+
+class LCAMap n gte s t a b | n gte s b -> t a where
+    lcamap' :: (forall r. FibTree r a -> Q (FibTree r b)) -> (FibTree e s) -> Q (FibTree e t)
+    
+
+instance (n' ~ (n - Count l), -- We're searching in the right subtree. Subtract the leaf number in the left subtree
+            lc ~ (LeftCount r), -- dip one level down to order which way we have to go next
+            gte ~ (CmpNat lc n'), -- Do we go left, right or have we arrived in the next layer?
+            LCAMap n' gte r r' a b,  -- recursive call
+            t ~ (l,r') -- reconstruct total return type from recursive return type. Left tree is unaffected by lcamapping
+            ) => LCAMap n 'LT (l,r) t a b where
+        lcamap' f x = rmap (lcamap @n' f) x
+    
+instance (lc ~ (LeftCount l),
+            gte ~ (CmpNat lc n),
+            LCAMap n gte l l' a b,
+            t ~ (l',r)
+            ) => LCAMap n 'GT (l,r) t a b where
+        lcamap' f x = lmap (lcamap @n f) x
+    
+instance (t ~ b, a ~ s) => LCAMap n 'EQ s t a b where -- Base case
+    lcamap' f x = f x
+
+
+
+class Twiddle s t a b | s b -> t a where
+    twiddle :: (forall r. FibTree r a -> Q (FibTree r b)) -> FibTree e s -> Q (FibTree e t)
+    
+instance Twiddle ((l,x),(y,r)) ((l,c),r) (x,y) c where
+    twiddle f x = do
+            x'  <- fmove x -- (((l',x),y),r')
+            x'' <- lmap fmove' x' -- ((l',(x,y)),r')
+            lmap (rmap f) x''
+instance Twiddle (Tau, (y,r)) (c,r) (Tau, y) c where
+    twiddle f x = fmove x >>= lmap f
+instance Twiddle (Id, (y,r)) (c,r)  (Id, y) c where
+    twiddle f x = fmove x >>= lmap f
+instance Twiddle ((l,x), Tau) (l,c) (x,Tau) c where
+    twiddle f x = fmove' x >>= rmap f
+instance Twiddle ((l,x), Id) (l,c) (x,Id) c where
+    twiddle f x = fmove' x >>= rmap f
+instance Twiddle (Tau, Tau) c (Tau,Tau) c where
+    twiddle f x = f x 
+instance Twiddle (Id, Id) c (Id,Id)  c where
+    twiddle f x = f x 
+instance Twiddle (Tau, Id) c (Tau,Id)  c where
+    twiddle f x = f x 
+instance Twiddle (Id, Tau) c (Id,Tau) c where
+    twiddle f x = f x 
+
+nmap :: forall (n :: Nat) s t a b a' b' l l' r r' e gte.
+    (gte ~ CmpNat (LeftCount s) n,
+    LCAMap n gte s t a' b',
+    a' ~ (l,r),
+    PullRightLeaf l l',
+    PullLeftLeaf r r',
+    Twiddle (l',r') b' a b) => 
+    (forall r. FibTree r a -> Q (FibTree r b)) -> FibTree e s -> Q (FibTree e t)
+nmap f z = lcamap @n @s @t @a' @b' (\x -> do
+                                           x'  <- lmap pullRightLeaf x
+                                           x'' <- rmap pullLeftLeaf x' 
+                                           twiddle f x'') z
+
+t1 = nmap @2 braid (TTT (TTI TLeaf ILeaf) (TTT TLeaf TLeaf)) 
+t5 = nmap @2 pure (TTT (TTI TLeaf ILeaf) (TTT TLeaf TLeaf)) >>= nmap @3 pure
+t2 = nmap @1 braid (TTT (TTI TLeaf ILeaf) (TTT TLeaf TLeaf)) 
+t4 = nmap @1 braid (TTT TLeaf (TTT TLeaf TLeaf)) 
+t3 = nmap @2 braid (TTT (TTT (TTT TLeaf TLeaf) TLeaf) (TTT TLeaf TLeaf)) 
+t6 = rightAssoc (TTT (TTT (TTT TLeaf TLeaf) TLeaf) (TTT TLeaf TLeaf)) 
+t7 = t6 >>= bmove
+t8 = t6 >>= rmapN @0 bmove
+-- For the category, we probably don't want the association structure.
+-- '[Tau, Id, Tau, Id] typelevel list of particles
+-- 
+
+ttt = TTT TLeaf TLeaf
+example = starttree >>=
+        nmap @1 braid >>=
+        nmap @2 braid >>=
+        nmap @1 (dot ttt) >>=
+        nmap @1 braid' >>=
+        nmap @2 (dot ttt) >>=
+        nmap @1 (dot ttt) where
+        starttree = pure (TTT (TTT TLeaf
+                              (TTT TLeaf 
+                                   TLeaf))
+                          TLeaf
+                         )
+-- would be nice to use an unknot
+-- example2 = 
 -- I should use neighbormap for this.
 -- maybe I should call f fuse and make it global?
 
