@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 827bee8377b9e2a5444ae3ae2f4513bd74e401e48495d701d889f9166dc227d2
+-- hash: 1cfa01482790f82773a9b92dc9f202ea94f65c643950f4494cc05f8cd80d0204
 
 name:           fib-anyon
 version:        0.1.0.0
@@ -26,6 +26,7 @@ source-repository head
 
 library
   exposed-modules:
+      Cat
       Fib
       Vec
   other-modules:
