@@ -1,8 +1,10 @@
--- This file has been generated from package.yaml by hpack version 0.28.2.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.1.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1cfa01482790f82773a9b92dc9f202ea94f65c643950f4494cc05f8cd80d0204
+-- hash: 7305e604c4ed2f3da2c195a07083438e55664e325f86db611a8b75ad0cec4dd2
 
 name:           fib-anyon
 version:        0.1.0.0
@@ -15,10 +17,9 @@ copyright:      2018 Author name here
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
 extra-source-files:
-    ChangeLog.md
     README.md
+    ChangeLog.md
 
 source-repository head
   type: git
@@ -28,6 +29,7 @@ library
   exposed-modules:
       Cat
       Fib
+      Qubit
       Vec
   other-modules:
       Paths_fib_anyon
