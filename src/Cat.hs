@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs, StandaloneDeriving, NoImplicitPrelude, FlexibleInstances, RankNTypes, 
 TypeApplications, ScopedTypeVariables, MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts, 
-UndecidableInstances, AllowAmbiguousTypes, ConstraintKinds, TypeOperators, DataKinds, PolyKinds  #-}
+UndecidableInstances, AllowAmbiguousTypes, ConstraintKinds, TypeOperators, DataKinds, PolyKinds, InstanceSigs  #-}
 
 module Cat where
 import Control.Category
@@ -9,6 +9,7 @@ import Fib
 import Vec
 import Control.Monad ((<=<))
 import GHC.TypeNats
+import Control.Arrow ((***))
 {-
 -- make the leftmost porton of a match b, turning it into c
 class LeftMatch pat a c | pat a -> c where 
@@ -85,7 +86,22 @@ instance ReAssoc Tau Tau where
 instance ReAssoc Id Id where
     reassoc = pure
 
+{-
+ \((x,y),z) -> (x, (y,z))
+ -- Compiling to monoidal categories.
+ -- Could also find ways to pad in or out any () units automatically.
+ -- Can I compile a linear function to monoidal categories using the associator?
+ 
+ -- Then I could compile quantum functions. Neat.
 
+ -- finding good swaps is tough though.
+linear typed functions are symmettric monoidal categories, pretty sure. Not cartesian.
+ 
+ -- The automatic associator
+
+This right here has a lot of what we need to do compiling to categories of just monoidal categries.
+
+-}
 
 t4 :: Q (FibTree Tau (Tau,(Tau,Tau)))
 t4 = reassoc (TTT TLeaf (TTT TLeaf TLeaf))
@@ -152,17 +168,39 @@ instance (
 instance LeftCollect n 'EQ (l,r) (l,r) where
     leftcollect' = pure
 
+-- We could define these functions for arbitrary monoidal categorues with reassociators (which is all of them)
+-- The Count method requires things to be 
+-- It's gonna be ugly. Would need more of the incoherent trick
+-- Count (a,b) or Count a = 1 as default case.
 
 t1 = leftcollect @2 (TTT (TTT TLeaf TLeaf) TLeaf)
 t2 = leftcollect @1 (TTT (TTT TLeaf TLeaf) TLeaf)
 
+{-
+newtype FibOp' a b = FibOp' {runFibOp' :: forall e a' b'. (ReAssoc a a', ReAssoc b' b) => FibTree e a' -> Q (FibTree e b')} 
+--newtype FibOp' a b = FibOp' {runFibOp' :: forall e a'. (ReAssoc a a', ReAssoc a' a) => FibTree e a' -> Q (FibTree e b)} 
+-- newtype FibOp' a b = FibOp' {runFibOp' :: forall e a' b'. (ReAssoc a a', ReAssoc a' a, ReAssoc b b', ReAssoc b' b) => FibTree e a' -> Q (FibTree e b')} 
 
+instance Category FibOp' where
+    id :: forall a. FibOp' a a
+    id = FibOp' pure
+    (.) :: forall a b c. FibOp' b c -> FibOp' a b -> FibOp' a c
+    (FibOp' f) . (FibOp' g) = undefined --  FibOp' $ reassoc <=< f <=< reassoc <=< reassoc <=< g <=< reassoc
+    
+    {-$ \x -> do
+            
+            x' <- g x
+            x'' <- reassoc x'
+            f x'' -}
 
+-}       
+    -- (f <=< reassoc <=< g)
 -- t3 = leftcollect @3 (TTT (TTT TLeaf TLeaf) TLeaf) -- error
 -- 
 -- ReAssoc is just a recursive Collect n. Like how RightCaonical is recursive pullLeft
-
--- newtype FibOp c a b = FibOp {runFib :: (FibTree c a -> Q (FibTree c b))}
+(...) :: ReAssoc b b' => FibOp b' c -> FibOp a b -> FibOp a c
+(FibOp f) ... (FibOp g) = FibOp $ f <=< reassoc <=< g
+ -- newtype FibOp c a b = FibOp {runFib :: (FibTree c a -> Q (FibTree c b))}
 newtype FibOp a b = FibOp {runFib :: (forall c. FibTree c a -> Q (FibTree c b))}
 -- type FibOp' c a b = FibTree c a -> Q (FibTree c b)
 
@@ -174,6 +212,11 @@ class Category k => Monoidal k where
     parC :: k a c -> k b d -> k (a,b) (c,d)
     assoc :: k ((a,b),c) (a,(b,c))
     unassoc :: k (a,(b,c)) ((a,b),c)
+    leftUnitor :: k ((),a) a
+    leftUnitor' :: k a ((),a)
+    rightUnitor :: k (a,()) a
+    rightUnitor' :: k a (a,())
+    
     -- maybe we hsould just ignore these. They are annoying.
     {-
     type I :: *
@@ -184,10 +227,24 @@ class Category k => Monoidal k where
 
 
 
+
 instance Monoidal (FibOp) where
     parC (FibOp f) (FibOp g) = (FibOp (lmap f)) . (FibOp (rmap g))  -- This is where we need c to be forall. We want to be able to par... There isn't a unique way to do Tau?
     assoc = FibOp  fmove'
     unassoc = FibOp fmove
+    leftUnitor = FibOp leftUnit
+    leftUnitor' = FibOp leftUnit'
+    rightUnitor = FibOp rightUnit
+    rightUnitor' = FibOp rightUnit'
+
+instance Monoidal (->) where
+    parC f g =  f *** g 
+    assoc ((x,y),z) = (x,(y,z))
+    unassoc (x,(y,z)) = ((x,y),z)
+    leftUnitor (_, x) = x 
+    leftUnitor' x = ((),x)
+    rightUnitor (x, _) = x
+    rightUnitor' x = (x,())
     {-    
         type I = Id
          idl = FibOp $ \t -> case t of

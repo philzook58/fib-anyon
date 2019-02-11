@@ -20,7 +20,8 @@ import Data.Proxy
 
 
 data Tau
-data Id
+--data Id
+type Id = ()
 data FibTree root leaves where
    TTT :: FibTree Tau l -> FibTree Tau r -> FibTree Tau (l,r)
    ITT :: FibTree Tau l -> FibTree Tau r -> FibTree Id (l,r) 
@@ -144,6 +145,27 @@ fmove' (TTT ( TTT  a b) c) = W [(TTI  a  (ITT b c), sqrt tau)  , (TTT  a  (TTT b
 
 fmove' (III ( III  a b) c ) = pure $ III  a  (III b c)
 fmove' (III ( ITT  a b) c ) = pure $ ITT  a  (TTI b c)
+
+
+rightUnit :: FibTree e (a,Id) -> Q (FibTree e a)
+rightUnit (TTI t _) = pure t
+rightUnit (III t _) = pure t
+
+rightUnit' :: FibTree e a -> Q (FibTree e (a,Id))
+rightUnit' t@(TTT _ _) = pure (TTI  t ILeaf)
+rightUnit' t@(TTI _ _) = pure (TTI  t ILeaf)
+rightUnit' t@(TIT _ _) = pure (TTI  t ILeaf)
+rightUnit' t@(III _ _) = pure (III  t ILeaf)
+rightUnit' t@(ITT _ _) = pure (III  t ILeaf)
+rightUnit' t@(ILeaf) = pure (III t ILeaf)
+rightUnit' t@(TLeaf) = pure (TTI t ILeaf)
+
+leftUnit :: FibTree e (Id,a) -> Q (FibTree e a)
+leftUnit = rightUnit <=< braid
+
+-- braid vs braid' doesn't matter, but it has a nice symmettry.
+leftUnit' :: FibTree e a -> Q (FibTree e (Id,a))
+leftUnit' = braid' <=< rightUnit' 
 
 
 dot :: FibTree a (b, c) -> FibTree a' (b, c) -> Q (FibTree a' a)
