@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7305e604c4ed2f3da2c195a07083438e55664e325f86db611a8b75ad0cec4dd2
+-- hash: ea183903e581ab82fe26165cdfd65e0d121d2cb0c07505decd7abc7bfbc0f28d
 
 name:           fib-anyon
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Cat
+      Diag
       Fib
       Qubit
       Vec
@@ -38,6 +39,9 @@ library
   build-depends:
       base >=4.7 && <5
     , containers
+    , diagrams
+    , diagrams-lib
+    , diagrams-svg
     , linear
   default-language: Haskell2010
 
@@ -53,6 +57,7 @@ executable fib-anyon-exe
     , base >=4.7 && <5
     , boxes
     , containers
+    , diagrams
     , fib-anyon
     , linear
   default-language: Haskell2010

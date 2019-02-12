@@ -1,6 +1,8 @@
 {-# LANGUAGE GADTs, StandaloneDeriving, NoImplicitPrelude, FlexibleInstances, RankNTypes, 
 TypeApplications, ScopedTypeVariables, MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts, 
-UndecidableInstances, AllowAmbiguousTypes, ConstraintKinds, TypeOperators, DataKinds, PolyKinds, InstanceSigs  #-}
+UndecidableInstances, AllowAmbiguousTypes, TypeFamilies  ,
+ ConstraintKinds, TypeOperators, DataKinds, PolyKinds, InstanceSigs, NoMonomorphismRestriction
+  #-}
 
 module Cat where
 import Control.Category
@@ -10,6 +12,8 @@ import Vec
 import Control.Monad ((<=<))
 import GHC.TypeNats
 import Control.Arrow ((***))
+
+
 {-
 -- make the leftmost porton of a match b, turning it into c
 class LeftMatch pat a c | pat a -> c where 

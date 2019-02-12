@@ -18,6 +18,7 @@ import Control.Category
 import Control.Monad ((<=<))
 import GHC.TypeNats
 import Data.Proxy
+import Diag (mymain)
 -- import qualified Text.PrettyPrint.ANSI.Leijen as PP
 import qualified Text.PrettyPrint.Boxes as B
 -- import Control.Arrow
@@ -1042,7 +1043,8 @@ second = rmap
 -- The bounded meaning of forall and exists in the GADT context
 
 main :: IO ()
-main = return ()
+main = mymain 
+--return ()
 
 
 

@@ -27,6 +27,9 @@ library:
   dependencies:
   - containers
   - linear
+  - diagrams
+  - diagrams-lib
+  - diagrams-svg
 
 executables:
   fib-anyon-exe:
@@ -42,6 +45,7 @@ executables:
     - linear
     - ansi-wl-pprint
     - boxes
+    - diagrams
 
 tests:
   fib-anyon-test:
