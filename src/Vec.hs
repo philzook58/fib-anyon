@@ -49,3 +49,6 @@ type Q a = W (Complex Double) a
 
 star :: Num b => W (Complex b) a -> W (Complex b) a
 star = mapW conjugate
+
+kron :: Num b => W b a -> W b c -> W b (a,c)
+kron (W x) (W y) = W [((a,c), r1 * r2) | (a,r1) <- x , (c,r2) <- y ]

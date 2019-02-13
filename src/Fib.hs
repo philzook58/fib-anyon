@@ -182,7 +182,35 @@ dot x@(ITT _ _) y@(ITT _ _) | x == y = pure ILeaf
 dot _ _ = mempty 
 
 
-
+class AllTrees a b where
+    allTrees :: [FibTree a b]
+instance AllTrees Tau Tau where
+    allTrees = [TLeaf]
+instance AllTrees Id Tau where
+        allTrees = []
+instance AllTrees Tau Id where
+        allTrees = []
+instance AllTrees Id Id where
+        allTrees = [ILeaf]
+instance (AllTrees Tau a, 
+         AllTrees Id a,
+         AllTrees Tau b, 
+         AllTrees Id b) => AllTrees Id (a,b) where
+        allTrees = (III <$> ia <*> ib) <> (ITT <$> ta <*> tb) where
+            ta = allTrees @Tau @a
+            ia = allTrees @Id @a
+            tb = allTrees @Tau @b
+            ib = allTrees @Id @b
+instance (AllTrees Tau a, 
+        AllTrees Id a,
+        AllTrees Tau b, 
+        AllTrees Id b) => AllTrees Tau (a,b) where
+       allTrees = (TIT <$> ia <*> tb) <> (TTI <$> ta <*> ib) <> (TTT <$> ta <*> tb) where
+            ta = allTrees @Tau @a
+            ia = allTrees @Id @a
+            tb = allTrees @Tau @b
+            ib = allTrees @Id @b
+t9 = allTrees @Tau @((Tau,Tau),Tau)
 
 -- Resulting type depends on input
 -- I think a typefamily type computation might be necessary? 

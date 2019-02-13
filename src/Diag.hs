@@ -34,7 +34,7 @@ instance {-# INCOHERENT #-} (a ~ (P2 Double)) =>  EmptyTree a where
     emptyTree = SLeaf' origin
 id' = parC id id
 -- d1 :: _
-d1  = (runDM $ (id' . id')) emptyTree-- (SNode' (SLeaf' origin) (SLeaf' origin)) -- emptyTree -- $ SNode' (SLeaf origin ) (SNode' (SLeaf' origin) (SLeaf' origin))
+d1  = (runDM $ (id' . id')) emptyTree -- (SNode' (SLeaf' origin) (SLeaf' origin)) -- emptyTree -- $ SNode' (SLeaf origin ) (SNode' (SLeaf' origin) (SLeaf' origin))
 mymain = mainWith (fst d1)
 --( hsep 1 [morphism, morphism, morphism])
 
@@ -90,6 +90,11 @@ instance Category DMorph where
                                               let (d2, z) = f y' in -- or put vshift here?
                                               (d2 <> d1 <> d, z) -- arrowBetween?
 x_comp = fst . unp2
+y_comp = snd . unp2
+maxX x = maximum $ fmap x_comp x
+minX x = minimum $ fmap x_comp x
+maxY x = maximum $ fmap y_comp x
+width ps = (maxX ps) - (minX ps)
 instance Monoidal DMorph where
     parC (DMorph f) (DMorph g) = DMorph $ \case (SNode' a b) ->  let (d1, c) = f a in
                                                                  let cmax = maximum $ fmap x_comp c in
@@ -105,6 +110,16 @@ instance Monoidal DMorph where
     leftUnitor' = error "Not imlemented"
     rightUnitor  = error "Not imlemented"
     rightUnitor'  = error "Not imlemented"
+dswap :: DMorph (a,b) (b,a)
+dswap = DMorph $ \case (SNode' a b) ->  let delta = (minX a) - (minX b) in -- not right.
+                                    let a' = (fmap (vshift 1)) $ (fmap (hshift delta)) a  in 
+                                    let b' = (fmap (vshift 1)) $ (fmap (hshift (-delta))) b in 
+                                    let arrowa = fold $ zipWith arrowBetween (toList a) (toList a') in
+                                    let arrowb = fold $ zipWith arrowBetween (toList b) (toList b') in        
+                                    (arrowa <> arrowb , SNode' b' a')
+instance Braided DMorph where
+    over = dswap
+    under = dswap
 -- id par id par id. But we'll initlize it with space out stuff.
 -- par f g = 
 -- swap = \ SNode a b -> (SNode b a, vshift shift 

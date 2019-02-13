@@ -31,11 +31,11 @@ swap = Compose . sequenceA . getCompose
 
 -- kron :: (Num a, Functor f, Functor g) => f a -> g a -> Kron f g a
 -- kron f g = Compose $ fmap (\amp1 -> fmap (\amp2 -> amp1 * amp2) g) f
-kron :: (Num a, Functor f, Functor g) => f a -> g a -> Kron f g a
-kron x y = Compose (outer x y)
+kron' :: (Num a, Functor f, Functor g) => f a -> g a -> Kron f g a
+kron' x y = Compose (outer x y)
 
 densify ::  (Additive (Kron f g), Num a, Functor f, Functor g) => FKron f g a -> Kron f g a
-densify (FKron xs) = sumV $ map (uncurry kron) xs
+densify (FKron xs) = sumV $ map (uncurry kron') xs
 
 -- SVD let's you re free
 -- but also [indicatro vectro, g a]

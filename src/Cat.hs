@@ -12,6 +12,7 @@ import Vec
 import Control.Monad ((<=<))
 import GHC.TypeNats
 import Control.Arrow ((***))
+import Data.Tuple (swap)
 
 
 {-
@@ -89,6 +90,8 @@ instance ReAssoc Tau Tau where
     reassoc = pure
 instance ReAssoc Id Id where
     reassoc = pure
+
+
 
 {-
  \((x,y),z) -> (x, (y,z))
@@ -208,6 +211,35 @@ instance Category FibOp' where
 newtype FibOp a b = FibOp {runFib :: (forall c. FibTree c a -> Q (FibTree c b))}
 -- type FibOp' c a b = FibTree c a -> Q (FibTree c b)
 
+newtype LinOp a b = LinOp {runLin :: a -> Q b}
+-- newtype LinOp a b = LinOp {runLin :: (Eq a, Eq b) => Q (a,b)} -- More matrix like form
+
+
+
+
+
+{-
+       data FibOuter a b where
+        FibOuter :: FibTree e a -> FibTree e b -> FibOuter a b
+    class FibIdent a where
+        expansion :: [(FibOuter a a)]
+    
+    instance FibExpansion Tau where
+        expansion = pure (FibOuter TLeaf TLeaf)
+    instance FibExpansion Id where
+        expansion = pure (FibOuter ILeaf ILeaf)
+    instance (FibExpansion a , FibExpansion b) => FibExpansion (a,b) where
+        expansion = pure (FibOuter ILeaf ILeaf) 
+                 e1 = expansion @a
+                 e2 = expansion @b
+FibTree e a -> FibTree f b -> FibTree 
+FibOuter a a -> FibOuter b b -> [FibOuter (a,b) (a,b)]
+(FibOuter TLeaf TLeaf) (FibOuter TLeaf TLeaf) = [FibOuter (TTT TLeaf TLeaf) (TTT TLeaf TLeaf), (ITT TLeaf TLeaf) (ITT TLeaf TLeaf)]
+-}
+instance Category LinOp where
+    id = LinOp pure
+    (LinOp f) . (LinOp g) = LinOp (f <=< g)
+
 instance Category (FibOp) where
   id = FibOp pure
   (FibOp f) . (FibOp g) = FibOp (f <=< g) 
@@ -241,6 +273,15 @@ instance Monoidal (FibOp) where
     rightUnitor = FibOp rightUnit
     rightUnitor' = FibOp rightUnit'
 
+instance Monoidal LinOp where
+    parC (LinOp f) (LinOp g) = LinOp $ \(a,b) -> kron (f a) (g b) -- This is where we need c to be forall. We want to be able to par... There isn't a unique way to do Tau?
+    assoc = LinOp  (pure . assoc)
+    unassoc = LinOp (pure . unassoc)
+    leftUnitor = LinOp (pure . leftUnitor)
+    leftUnitor' = LinOp (pure .leftUnitor')
+    rightUnitor = LinOp (pure . rightUnitor)
+    rightUnitor' = LinOp (pure . rightUnitor')
+
 instance Monoidal (->) where
     parC f g =  f *** g 
     assoc ((x,y),z) = (x,(y,z))
@@ -260,7 +301,7 @@ instance Monoidal (->) where
 Dagger? Dual? Rigid?, Compact closed
 cap :: k (a,a) I
 cup :: k I (a,a)
-
+-- daulities. CPS, Either <-> TUple, Adjunctions
 type Dual v = Q v -> Double
 type Dual a = FibOp a I
 
@@ -268,10 +309,23 @@ DualFibOp b a = DualFibOp Dual a -> Dual b
 
 dag :: FibOp a b -> DualFibOp b a
 dag' :: uses dot?
-
-
+-- Dual r a = Dual (a -> r)
+-- a -> b ~ CoYoneda (a -> r, r -> b)
+-- (a -> (), a) -> ()
+-- LinOp a (LinOp b c) = a -> Q (b -> Q c) ~ (a,b) -> Q c
+-- yeah I think we can swing that
+-- Dual a = LinOp a ()
+-- apply :: LinOp (Dual a, a) () -- the dual isn't really on the index though?
+-- Bounded Enum a => LinOp () (Dual a, a)
+-- 
+-- a -> (  , () )
 -- in data-category he uses FibOp a a as a stand in for object a
 -- in this case FibOp Id Id = ILeaf, FibOp Tau Tau = TLeaf. They are indeed good stand ins
+-- what am I doing. Duality is a bog
+-- newtype Dagger a b = Dagger {primal :: LinOp a b, dual :: LinOp b a}
+-- dag (Dagger f g) = Dagger g f
+-- dag = FibOp . dot
+-- 
 
 -- We need to also make a category that draws diagrams
 http://tex-talk.net/2011/09/the-braids-package/
@@ -303,6 +357,30 @@ instance Braided FibOp where
     over = FibOp braid
     under = FibOp braid'
 
+instance Braided (->) where
+    over = swap
+    under = swap
+
+instance Braided (LinOp) where
+    over = LinOp (pure . swap)
+    under = LinOp (pure . swap)
+
+ -- (Eq a) => Q (a,b) -> LinOp a b
+-- LinOp (LinOp a b) () ->
+-- () -> (a,a)
+-- (a,a) -> () 
+-- (Bounded a, Enum a) => LinOp () (a,a)
+-- Eq a => LinOp (a,a) () ~ curry dot
+-- curry :: k a (k b c) -> k (a,b) c
+-- uncurry :: k (a,b) c)-> k a (k b c)
+-- Dual k a b = forall r. k (k b r) (k a r)
+-- type Dual a = LinOp a ()
+-- newtype Dagger a = Dagger a
+-- class Dagger k where
+    -- type Dual :: * -> *
+    -- dag :: k a b -> k (Dual b) (Dual a)
+    -- dag' :: k (Dual a) (Dual b) -> k' b a 
+--  Dual k
 {-
 class Monoidal k => Cartesian k where
     fstC :: k (a,b) a 
