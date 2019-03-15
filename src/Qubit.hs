@@ -20,8 +20,68 @@ type DSum = Product
 
 newtype FKron f g a = FKron [(f a, g a)]
 
+type Fock a =  Q [a] -- a "fock space" over a. No assumption of anti symmettric or symmettric. 
+newtype Anti a = Anti (Fock a)
+-- for antisymmettric space, keep list sorted (canonical form).
+-- liftAnti1 :: (a -> Q a) -> ([a] -> Q [a])
+-- liftAnti2 :: (a,a) -> Q (a,a) -> ([a] -> Q [a])
+-- 
+
+-- this is fock system as a sparse indictaor matrix. We can also do the form of occupation number  Q (V Bool)
+
+vac :: Fock a
+vac = pure []
+
+type SHO = Q Int
+
+shovac :: SHO 
+shovac = pure 0
+adag :: Int -> SHO
+adag n = W [(n + 1, sqrt (fromInteger (toInteger n) + 1))]
+agad 0 = mempty
+agad n = W [(n - 1, sqrt n)]
+-- boson system can be seen as collection of oscillators. Q (V Int).  Positive integers really.
+
+type Boson v = Q (v Int) -- accepts a functor describing all the oscillators. A Vec for example.
+-- bvac = pure zero -- if v is a Vector type, it probably has a zero.
+--     
 
 
+-- traversable ordering. The vector is put into canocnical form with adag appearing first in the traversal coming first.
+type Fermion v = Q (v Bool) -- fermion needs to prefix count to figure out signs. This means that v has to be traversable? Foldable?
+fvac :: Applicative v => Fermion v
+fvac = pure (pure False)
+{-
+-- what about systems with different types of particles.
+particle-hole  Q ([a], [a])
+
+
+AntiOp a = AntiOp [a] -> Q [a]
+-- indexed linear operators. a -> AntiOp a
+psi :: Ord a => a -> (a -> Anti a)
+psidag :: Ord a => a -> (a -> Anti a)
+
+phi :: Ord a => a -> (a -> Sym a)
+phidag :: Ord a => a -> (a -> Sym a)
+
+-- hmm. Something kind of funny about these.
+lift1 :: (i -> Double) -> (i -> Fock i)
+lift2 :: (i -> i -> Double) -> (i -> Fock i)
+symlift -- mention that there is implcit symmettrization
+2 natural lifts. cnnected by logarithms. UxUxUxU vs HIII + IHII + IIHI + IIIH
+
+
+sum1 :: (i -> i -> Q i) -> (i -> Q i) -- takes an indexed operator and turns it into an operator
+sum1 :: (i -> AntiOp i) -> (AntiOp i)
+sum2
+sum :: Addable b => (i -> b) -> b
+
+
+turn all of this into a typeclass functions. Then do this form, but also full initial form for manipulation.
+
+dyson
+
+-}
 -- instance (Additive f, Additive g) => Additive (Compose f g) where
 -- instance Num f (g a) => Num (Compose f g a)
 

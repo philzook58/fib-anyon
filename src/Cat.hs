@@ -214,8 +214,20 @@ newtype FibOp a b = FibOp {runFib :: (forall c. FibTree c a -> Q (FibTree c b))}
 newtype LinOp a b = LinOp {runLin :: a -> Q b}
 -- newtype LinOp a b = LinOp {runLin :: (Eq a, Eq b) => Q (a,b)} -- More matrix like form
 
+-- this is a tree data type. Basically an alternative form of the typed vector   Vec a i
+-- also basically an alternativew to raw tuples (a,a). It enforces that all the leaves have to match. 
+data TreeVec i a where
+    Leaf :: i -> TreeVec i i
+    Node :: TreeVec i a -> TreeVec i b -> TreeVec i (a,b)
+-- parity sort?
+-- liftList ::  ([a] -> [a]) -> TreeVec i a  -> TreeVec i a
+--
 
-
+-- what are the invariants here? Runs on already antisymmettric vectors? Or runs on possibly not symmettrized vectors?   
+-- should there be a tree structure? 
+newtype AntiOp i a b = AntiOp {runAnti :: TreeVec i a -> Q (TreeVec i b)}
+newtype SymOp i a b = SymOp {runSym :: TreeVec i a -> Q (TreeVec i b)}
+-- type Fock a =  Q [a]
 
 
 {-
@@ -239,6 +251,10 @@ FibOuter a a -> FibOuter b b -> [FibOuter (a,b) (a,b)]
 instance Category LinOp where
     id = LinOp pure
     (LinOp f) . (LinOp g) = LinOp (f <=< g)
+
+instance Category (AntiOp i) where
+    id = AntiOp pure
+    (AntiOp f) . (AntiOp g) = AntiOp (f <=< g) -- as part of composition, we may want a re-sort with parity sign.
 
 instance Category (FibOp) where
   id = FibOp pure
@@ -281,7 +297,17 @@ instance Monoidal LinOp where
     leftUnitor' = LinOp (pure .leftUnitor')
     rightUnitor = LinOp (pure . rightUnitor)
     rightUnitor' = LinOp (pure . rightUnitor')
-
+{-
+-- not clear how this should work.
+instance Monoidal AntiOp where
+    parC (AntiOp f) (AntiOp g) = AntiOp $ \(a,b) -> kron (f a) (g b) -- This is where we need c to be forall. We want to be able to par... There isn't a unique way to do Tau?
+    assoc = AntiOp  (pure . assoc)
+    unassoc = AntiOp (pure . unassoc)
+    leftUnitor = AntiOp (pure . leftUnitor)
+    leftUnitor' = AntiOp (pure .leftUnitor')
+    rightUnitor = AntiOp (pure . rightUnitor)
+    rightUnitor' = AntiOp (pure . rightUnitor')
+-}
 instance Monoidal (->) where
     parC f g =  f *** g 
     assoc ((x,y),z) = (x,(y,z))
@@ -364,7 +390,11 @@ instance Braided (->) where
 instance Braided (LinOp) where
     over = LinOp (pure . swap)
     under = LinOp (pure . swap)
-
+{-
+instance Braided (AntiOp i) where
+    over |  = AntiOp (pure . swap) -1 .*
+    under = over -- AntiOp (pure . swap)
+-}
  -- (Eq a) => Q (a,b) -> LinOp a b
 -- LinOp (LinOp a b) () ->
 -- () -> (a,a)
