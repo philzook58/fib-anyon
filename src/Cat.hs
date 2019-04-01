@@ -278,7 +278,13 @@ class Category k => Monoidal k where
     idr' :: k a (I,a) -}
 
 
-
+instance Num (LinOp a a) where
+    (LinOp a) + (LinOp b) = LinOp $ \x -> (a x) <> (b x)
+    x * y = x . y
+    negate (LinOp f) = LinOp $ \x -> (-1) .* (f x)
+    fromInteger n = LinOp $ \x -> W [(x, fromInteger n)] 
+    abs f = error "Abs not obvious for LinOp"
+    signum f = error "Signum not obvious for LinOp" 
 
 instance Monoidal (FibOp) where
     parC (FibOp f) (FibOp g) = (FibOp (lmap f)) . (FibOp (rmap g))  -- This is where we need c to be forall. We want to be able to par... There isn't a unique way to do Tau?

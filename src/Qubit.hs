@@ -9,7 +9,7 @@ import Data.Complex
 import Data.Functor.Compose
 import Data.Functor.Product
 import Data.Functor.Identity
-
+import Cat
 
 type Kron = Compose
 type Spin = V2
@@ -40,6 +40,11 @@ adag :: Int -> SHO
 adag n = W [(n + 1, sqrt (fromInteger (toInteger n) + 1))]
 agad 0 = mempty
 agad n = W [(n - 1, sqrt n)]
+
+
+raise = LinOp adag
+lower = LinOp agad
+
 -- boson system can be seen as collection of oscillators. Q (V Int).  Positive integers really.
 
 type Boson v = Q (v Int) -- accepts a functor describing all the oscillators. A Vec for example.
