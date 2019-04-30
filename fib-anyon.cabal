@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ea183903e581ab82fe26165cdfd65e0d121d2cb0c07505decd7abc7bfbc0f28d
+-- hash: 21c9381c0c03cf5337e4d98a796b243ccf0064cd6e15eca05a5781b505e94ebf
 
 name:           fib-anyon
 version:        0.1.0.0
@@ -32,6 +32,7 @@ library
       Fib
       Qubit
       Vec
+      Vect2
   other-modules:
       Paths_fib_anyon
   hs-source-dirs:
