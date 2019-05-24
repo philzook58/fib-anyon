@@ -78,6 +78,19 @@ type family Index v i where
     Index (x : xs) 0 = x
     Index (x : xs) n = Index xs (n-1)
 
+
+type family Append v v' where
+    Append '[] v = v 
+    Append (x : xs) v = x : (Append  xs v)
+
+-- [(a, f)]
+-- [(a,b,f)]
+{- A type family for a sparse matrix format [(r,c,val)]
+type family MMult2 m v where
+    MMult2  ( (y,x,f) : ms)   ((x,g) : xs) = (y, f :*: g) : 
+    MMult2 _ '[] = '[]
+    MMult2 '[] _ = '[]
+-}
 {-
 Alternaitve - define linear maps using type family name per map
 Can't go higher order though. 
