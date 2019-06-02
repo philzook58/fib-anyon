@@ -1,0 +1,459 @@
+slide 1
+
+Hierarchy the bullets
+Quantum Computation
+
+this is not a good example
+```haskell```
+data MyGadt s where
+    MyInt :: Int -> MyGadt Int
+    MyBool :: Bool -> MyGadt Bool
+```
+
+= \begin{bmatrix} 0.3 & 0.7 \end{bmatrix}$
+= \frac{1}{5} \begin{bmatrix} 4i & 3 \end{bmatrix}
+# Quantum Gates
+::: notes
+get some pics here
+:::
+
+
+- Nand complete for classical circuits
+- Complete Set, CNot and 1-spin qubits 
+- Build big ole matrices by decomposing them into matrices acting of small kronecker pieces
+- Measurement (reading some current or voltage or something)
+![](./H_CNOTGate.png){ width=50% }
+
+# Topological Quantum Gates
+::: notes
+to the best of my understanding of physics, there is no reason to believe ANY particle
+you ever talk about is anything more than a quasiparticle. The distincting may be nonsensical
+
+Classical error correction and magnetic disks. Use the physics to do error correction for you
+Magnets are a phase of matter with intrinisic error correcting properties.
+
+What is topological about any of this?
+Topology is geometry mod wiggles, which leaves only the connectivity structure (well you can also abstract it into oblivion)
+Well only the topology of the braiding matters
+Also if you put these states of matter onto topological surfaces
+The ground state degeneracy depends on the topology of the surface (torii double torii spheres).
+This is a related thing. A particle is a certain kind of hole in the ground state. 
+There is not enough time to go into this and do I even really understand it?
+
+:::
+
+- Anyons - Quasiparticles.
+- If it smells and quacks like a duck
+- Baseballs, atoms, nuclei, electrons quarks?
+- Braiding of quasiparticles
+- Annihilating quasiparticles - Measurement
+
+## ![](./anyon.png){ width=50% }
+
+#Anyons
+::: notes
+They are a strange beast.
+Particle production trees
+Only certain kinds of particles can be made from others possibly in distinct ways
+The Vector space is labelled by a particle topology of production.
+Basis is given by differing inner labels.
+OPerations on this vector space can only be implemented by braiding particles.
+The space is protected.
+Gapped ground state degeneracy. e^E/kT 
+Topological quantum computation is implementing via the braiding
+Energetic protection. An energy barrier can prevent something from happening
+Thermal or perturbative. Ball in a well.
+comparison to bosons and fermions
+
+2 dimensional beasts
+
+3d is an unusually rich place
+
+Merely by exisiting.
+
+:::
+
+
+## Topological Quantum Computation
+::: notes
+we don't have the space to touch this as a seperate slide
+:::
+
+- Anyons. A funky vector space. We'll get to it
+- Implement Gates As Braiding of Anyons
+- Majorana, FQHE, 
+
+
+# Representable Functors
+Any functor that is isomorphic to `(->) a`
+Gibbons Naperian Functors
+Connects the Functor Vector to the Free Vector style
+One slide? For everything?
+
+# Functor Vectors
+::: notes
+Vectors as Functor on Scalars
+struct vectors
+Representable functors makes a bridge between the two concepts.
+
+Ok. I don't think we  have time to get into this.
+
+:::
+
+(,,,,,,) ntuples
+Kmett's linear package 
+Compose = Kron
+
+Product = Direct Sum
+Natural Transforomations
+Indexing into with `fmap`
+
+# Hey ho buddi
+here we is
+```haskell
+myprog :: IO ()
+myprog = println "foo"
+```
+- item one
+- item two
+
+pandoc -t beamer -V theme:Warsaw topo.md -o topo.pdf
+
+
+
+::: notes
+
+Who are the people I'm talking to. Do they know haskell?
+
+Cut the what is haskell slide? If I need space? Put the haskell slide earlier
+
+Give up the quantum computation? Don't want to be asked. 
+I don't really plan on getting into quantum computation
+It is spicy, 
+Implementing infrastructure
+Implementing the vector spaces of 
+Building
+Describing
+
+
+
+Factoring, breaking RSA
+physical simulations, chemicals, catalysts, pharmaceuticals ("analog" simulation easier?)
+Speedup of search algorithms (Grover)
+Adiabatic optimization
+HHL solving linear eqautions
+
+superposition and entanglement. explores exponentially sized spaces with tiny pinholes in and out
+
+probability ~ chance and correlation. 
+The difference is slight and subtle. Sampling is also a tiny pinhole.
+This may account for why there are so few quantum alogirhtms in the gap.
+
+Possible implementations - enough to shake a stick at
+Superocnding
+Ion trapp
+
+Quantum mechanics encodes temporal operations in Unitary matrices
+Probability encodes temporal operations into transition matrices (sum of all columns = 1)
+
+Problems 
+Decoherence
+
+Error Correction. 
+
+
+Deutsch-Jones
+QFFT
+Grovers
+Shors
+HHL
+
+
+It IS kind of neato. 
+Maybe there are lessons to be learned that apply to classical computers
+heuristics
+Maybe they will expand the frontier of mankinds infromation processing abilities in my lifetime
+
+Nielsen and Chuang
+
+
+Quipper
+
+Haskell
+Math Vectors 
+QM
+
+QC
+QM
+
+
+:::
+
+# Vectors
+::: notes
+
+Styles of vector
+
+I do like my distinction  of small medium and big vectors
+Not sure it is relevant.
+I guess my point that it is particularly relevant for quantum computation
+Dense is unacceptable
+Sparse isn't really right.
+There may be room for complicated things
+I do not have the solution,
+vsum :: [a] 
+smul s = fmap (* s)
+
+As much as it might make you sick, free your mind from performance.
+
+
+:::
+
+
+# Automating mechanical aspects
+::: notes
+not sure I have desire nor time to go into this.
+The work is kind of trash anyhow. 
+My typeclass style programming is not pleasant.
+:::
+
+# Category Theory
+
+Category: Objects Morphisms
+Monoidal Category
+Braided
+
+Point free programming exposes categorical underpinnings
+Vect
+Kliesli Arrow of Linear Monad
+Physical processes
+ 
+Linear Types ~ Categories don't have to be cartesian (dup and proj).
+
+# 2 Vect anyons
+
+Since I'm not done with this, I am unlikely to talk about it
+
+
+
+# ReAssociation
+::: notes
+skip this one probably
+:::
+
+```haskell
+fmove :: FibTree a (c,(d,e)) -> Q (FibTree a ((c,d),e))
+fmove (ITT  a  (TIT b c)) = pure $ ITT ( TTI  a b) c
+fmove (ITT  a  (TTT b c)) = pure $ ITT ( TTT  a b) c
+...
+fmove (TTI  a  (ITT b c)) = W [(TIT ( ITT  a b) c, tau)         , (TTT ( TTT  a b) c, sqrt tau)]
+
+fmove (TTT  a  (TTT b c)) = W [(TIT ( ITT  a b) c, sqrt tau)  ,   (TTT ( TTT  a b) c, - tau   )]
+```
+
+# Trash
+
+
+
+What is my story?
+
+It's easiest to just sort of say the rules
+The vector spaces are
+
+different bases correspond to different topological production patterns
+Labellings of the trees are the different bases.
+ 
+ $2H_2 + O_2 -> H_2O$
+# Abstract Vectors
+::: notes
+- Little - XY, XYZ, RGB
+- Medium - PDE, Images
+- Big - Many DOF Probability and Quantum
+- linear independence
+- $A (\alpha \vec{x} + \beta \vec{y}) = \alpha A \vec{x} + \beta A \vec{y}$
+
+Maybe I should just cut this slide
+What is it's point?
+
+:::
+- Unifying Abstraction for many, many things
+- The main thing that is solvable
+- Linear Maps - Functions that commute with addition and scalar multiplication
+- Linear Algebra Powers all Numerics.
+
+making 
+They are unusually polymorphic.
+It let's you make many implciti things explciit
+
+```haskell
+data W b a = W { runW :: [(a,b)] } deriving (Eq,Show,Ord)
+```
+
+  + `newtype W r b = W [(b,r)]`
+
+
+vectors on computers
+
+color you're ocmpiling in your head when the computer hsould be compiling for you
+all erors to be cuaght at compile time
+
+It is painful to go functional and abtsrtact for linear algebra
+Traditionally linear algebra is a place where every ounce of perfromacne squeezed, every hack has been used
+Assembly, custom silicon, 
+This bias was difficult for me to overcome.
+
+One could do a lot of paper and pencil work and implement a special problem in Fortran or C.
+This might be appropriate depending on your needs.
+
+Integers are sometimes a natural basis, but often not.
+Integers are just things that can be counted
+We are programming to the computer or to humans or the domain.
+
+Functional programming is good
+Types are good.
+Types are good for reaosning and design
+What do I call these
+unsized?
+dynamic?
+untyped?
+weakly typed
+Haskell  is a statically typed, purely functional programming language with type inference and lazy evaluation.[28][29] Type classes, which enable type-safe operator overloading, originated in Haskell.[30] Its main implementation is the Glasgow Haskell Compiler. It is named after logician Haskell Curry.[1]
+
+How types help design?
+
+
+- np.array()
+- [Double]
+- Data.Vector
+- HMatrix
+- Repa
+- Massiv
+- accelerate
+
+- indexed on integer because computers like integers
+- Color
+- Vectors = Arrays
+
+- The simplest dense vector. Weakyly typed
+```haskell
+type Vec r = [r]
+```
+
+- A well typed dense vector
+```haskell
+data ColorSpace s = ColorSpace {r :: s, g :: s, b :: s}
+```
+
+- V3 vs Vec 3 a
+Community
+Medium weight formal methods
+succinteness
+Abstractability
+optimizaing compiler (fast)
+immutability
+
+type classes?
+
+hello world is not actually useful
+
+``` haskell
+main = printLn "Hello World"
+```
+
+Vectors are the conrerstone of computation
+
+
+There are different represetnations of vectors, with different utility.
+
+I did a thing
+
+Physics is important
+
+How did I get interested
+
+20 slides is too many
+
+
+20 * 5mins? 
+
+20*3 = 60
+
+
+Interesting physics for physics sake,
+topological qc is a propsed paradign for fighting decoherence. Like magnets bring physics into classical error correction
+the core necessary to even talk aout topological
+
+qubits are an abstraction divorced from phsyical implementatin
+anyons are an abstraction a little less divorced from physical implementation, but still fairly abstract
+
+But we'll impemented qubits on top of anyons
+
+Error Correction
+- anyonic vector spaces
+
+
+most of
+normalization
+matrix evolution
+R+ vs C
+probability is "parallel" too
+exponential sized
+double slit
+
+show some matrices? I like seeing a matrix.
+
+
+- discretized pde spaces
+- little, medium, big
+
+linear algebra
+linear maps
+
+Maybe this is a little ridiculous.
+I don't have the time to wax on about what a vector is. 
+If you don't know what vectors are you are kind of screwed by this talk
+
+- direction and magnitude
+- Abstract
+- basis elements mean thing
+
+- geometrical, 2d, 3d, 4d
+- color 3 dimensional BGR RGB
+
+- probability, and quantum mechanics
+
+
+[0.3  0.7]
+[4i/5 3/5]
+
+
+ \begin{bmatrix}
+0.3 & 0.9  \\
+0.7 & 0.1
+
+\end{bmatrix}
+
+Do we actually need this? 
+Only to explain why we need vectors? 
+
+$$ \begin{bmatrix}
+0.3 \\ 
+0.7
+\end{bmatrix}
+$$
+
+$ p_i = \begin{bmatrix}0.3&0.7\end{bmatrix}$
+
+$$psi_i = \frac{1}{5} \begin{bmatrix} 4i \\ 3 \end{bmatrix} $$
+
+$$\frac{1}{5} \begin{bmatrix}
+4i \\ 
+3
+\end{bmatrix}
+$$
+
+$$ \begin{bmatrix}
+0.3 & 0.9  \\
+0.7 & 0.1
+\end{bmatrix}
+$$

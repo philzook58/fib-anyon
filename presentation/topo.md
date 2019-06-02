@@ -3,95 +3,164 @@
 
 
 # Overview
-
-Where are we going today:
-
-- Quantum Computation
-- Haskell
-- Vectors
-- Anyons
-- Category Theory?
-
-# Quantum Mechanics in 5 Minutes
 ::: notes
-most of
-normalization
-matrix evolution
-R+ vs C
-probability is "parallel" too
-exponential sized
-double slit
-
-show some matrices? I like seeing a matrix.
-
+Where are we going today:
+- Category Theory?
 :::
 
-----------------------
-Probability                   Quantum                 
------------                   -------                
-$[0,1]$                       $\mathbb{C}$
+- Quantum Computation
+  + Quantum Mechanics
+  + Vectors
+  + Topological Quantum Compuation
+  + Anyons
+- Haskell
+  + Dense Vectors
+  + Sparse Vectors
+  + Linear Monad
+  + Implementing Fibonacci Anyons
 
-$p_i$                         $\psi_i$
-
-$\sum_i p_i = 1$              $\sum_i |a_i|^2 =1$
-
-$T_{ij}$                      $U$
-
-$\sum_j T_{ij} = 1$           $U^\dagger U = I$
-
-$sampling$                    $measurement$
-
-$d^n$                         $d^n$
-
-blase                         magic 
-
-----------------------
 
 
 # Quantum Computation
 ::: notes
-Interesting physics for physics sake,
-topological qc is a propsed paradign for fighting decoherence. Like magnets bring physics into classical error correction
-the core necessary to even talk aout topological
 
+- Hard to keep Quantum Quantum. 
+- Topological Quantum Computation
+![](./H_CNOTGate.png){ width=50% } ![](./anyon.png){ width=50% }
 :::
 
-- Applications in Cryptography, Optimization, Physical Simulations
-- Hard to keep quantum quantum. Error Correction
-- topological quantum computation
-- anyonic vector spaces
+- Use Quantum Mechanics to Solve Problems Fast
+- Applications 
+   + Cryptography
+   + Optimization
+   + Physical Simulations
+
+
+
+# Quantum Mechanics in 5 Minutes
+::: notes
+
+What makes quantum powerful  negative numbers
+Probability has superposition and entanglement
+
+We're trying to tread vast vistas today, so I'm going to go for the fastest explanation I can.
+We are all familiar with the notion of probability
+
+Vectors are a unifying notion for many proeprtes
+
+
+discrete states - metnotion that
+
+$T_{ij} = P(i | j)$            $U = e^{\frac{iHt}{\hbar}}$
+
+
+$\sum_i T_{ij} = 1$            $U^\dagger U = I$
+
+$\sum_i p_i = 1$               $\sum_i |\psi_i|^2 =1$
+:::
+
+--------------------------
+Probability                    Quantum          
+-----------                    -------          
+familiar                       magic 
+
+
+$S \rightarrow [0,1]$          $S \rightarrow \mathbb{C}$
+
+
+$d^n$ scaling                  $d^n$ scaling
+
+
+sampling                       measurement
+
+
+$p_i$                          $\psi_i$
+
+$T_{ij} = P(i | j)$            $U_{ij} = e^{\frac{iHt}{\hbar}}$
+
+----------------------
+
+
+
+#  Anyons
+::: notes
+
+Have a diagram of each junction type
+
+need a picture
+
+
+
+Productions rules like chemistry, or ncuealr physics. Werido conserved quantities
+Charge
+
+mention Hopf algebras? Nope.
+
+grab a table of the fibonacci anyon rules.
+- Production rules give possible Tree Nodes
+:::
+- Core Abstraction for Topological Quantum Computation
+- Anyons are peculiar particles
+- Production Rules $N_{ab}^c$
+  + Similar to chemistry or nuclear.
+- Quantum Vector Space 
+   + Number and Types of particles.
+
+
+
+
+# Fibonacci Anyons
+
+- Fibonacci Anyons
+  + Simple
+  + Universal
+- Two particle types: 
+  + $\tau$
+  + $I$
+- one nontrivial production: 
+  + $\tau \rightarrow \tau \tau$
+
+
+# Basis Choice
+
+- Choice of basis = Production Tree Shape
+
+![](./basis.png){ width=50% }
+
+# Basis Vector
+- Basis Vector = Interior Tree Labelling 
+
+![](./basis2.png){ width=50% }
+
+- How do I implement this monster?
+
 
 
 # Haskell
 ::: notes
-Haskell  is a statically typed, purely functional programming language with type inference and lazy evaluation.[28][29] Type classes, which enable type-safe operator overloading, originated in Haskell.[30] Its main implementation is the Glasgow Haskell Compiler. It is named after logician Haskell Curry.[1]
+Before we get into that, let's take am oment to talk about Haskell
+
+The runtime model is mathemtical functions. y =x^2 makes no says to say set x=7. Or to have internal state
+x = 2
+x = 3
+Is nonsense
+
+Maybe lose it?
 
 
-Community
-Medium weight formal methods
-succinteness
-Abstractability
-optimizaing compiler (fast)
-immutability
 
-type classes?
+I'm sorry to say that if you don't know haskell, you still won't after I'm done speaking, but I hope
+it is  still understandable at the psuedo code level
 
-hello world is not actually useful
-
-``` haskell
-main = printLn "Hello World"
-```
-
+ intuitive language model
 :::
 
-- Programming Language 1990
-- Functional
-- Statically Typed
-- Pure / Immutable
-- Lazily evaluated
+- Typed Functional Programming Language
+- Since 1990
+- Optimizing Compiler
+- Pure 
 - Polymorphic
-- Type classes
-
+- Lazily evaluated
 
 
 ```haskell
@@ -100,28 +169,30 @@ factorial 0 = 1
 factorial n = n * (factorial (n-1))
 ```
 
-# Mathematical Vectors
-- little arrows
-- direction and magnitude
-- Abstract
-- basis elements mean thing
-- little, medium, big
-- geometrical, 2d, 3d, 4d
-- color 3 dimensional BGR RGB
-- discretized pde spaces
-- probability, and quantum mechanics
+# Abstract Vectors
+::: notes
+could just say the little big thing
+- Little - XY, XYZ, RGB
+- Medium - PDE, Images
+- Big - Many DOF Probability and Quantum
+- linear independence
+- $A (\alpha \vec{x} + \beta \vec{y}) = \alpha A \vec{x} + \beta A \vec{y}$
 
+Maybe I should just cut this slide
+What is it's point? I need it for flow.
+- The main thing that is solvable
+- Functions that commute with addition and scalar multiplication
+:::
+- Unifying Abstraction for many, many things
+- Linear Maps 
+  + Tabulatable
+  + Invertible
+  + Analyzable
+- Linear Algebra Powers all Numerics.
+- Computer Implementation?
 
 # Computer Implemented Vectors 
 ::: notes
-vectors on computers
-
-color you're ocmpiling in your head when the computer hsould be compiling for you
-all erors to be cuaght at compile time
-
-Integers are sometimes a natural basis, but often not.
-Integers are just things that can be counted
-We are programming to the computer or to humans or the domain.
 
 Why do we make everything implciit, only in the mind of the programmer
 The dream is to make everything explicit in a pain free manner
@@ -129,78 +200,140 @@ That the language is helps you think, and helps to make sure you are making sens
 The compiler/ types are your friend. Not your enemmy not a disciplinarian
 , available for the compiler to check
 
-What do I call these
-unsized?
-dynamic?
-untyped?
-weakly typed
-
 
 for many scientific applications
 crashing isn't the primary concern really
 
-
+Integer indexing. programs for computers vs humans 
 
 :::
 
-- arrays
-- sparse vs dense
-- structures
+- Arrays
+  + `[a]`
+  + `Vector a`
 
-- indexed on integer because computers like integers
-- Color
-Vectors = Arrays?
-
-- np.array()
-- [Double]
-- Data.Vector
-- HMatrix
-- Repa
-- Massiv
-- accelerate
-
-
-
-
-- Vec n
-- Functor Vectors
+- Types as Intent and Design
+  + `data V4 a = V4 a a a a`
+  + `Vec 7 a`
 
 # Free Vectors
 ::: notes
 
-Vec n a here if anywhere
+:::
+
+- Make the type of the index  part of the vector
+- Explicit type for index/basis
+  + `b -> r`
+  + `Map b r`
+  + `[(b,r)]`
+- Similar to Sparse Vectors
+
+# Generalized Abstract Data Types (GADTs) for Anyon Trees
+::: notes
+
+- Particles $I$ and $\tau$
+
+Generalized Abstract Data Types
+Haskell Extension that let's you pick a signature for your constructors.
+Constructors are special function in that they are universal. The GADT maintains this universailty.
+You don't lose type information by applying a GADT constructor. It is recoverable via pattern matching.
+
+
+
+
+We can constrain our tree type using GADTs.
+
+Why did I do it this way.
+I wanted to hold the type representing the basis we're alking about
+The constructor
+
+Have a diagram of each junction type
+
+- Particles $I$ and $\tau$
+- Possible production rules:
+type Fib
+```haskell
+data Tau
+data Id
+```
 
 :::
 
-- good for sparse
-- make the domain part of the vector
-historical 
-row column formats
-
-- b -> r
-- Map b r
-- [(b,r)]
 
 ```haskell
-data W b a = W { runW :: [(a,b)] } deriving (Eq,Show,Ord)
+data FibTree root leaves where
+      TTT :: FibTree Tau l -> FibTree Tau r 
+                           -> FibTree Tau (l,r)
+      ITT :: FibTree Tau l -> FibTree Tau r 
+                           -> FibTree Id (l,r) 
+      TIT :: FibTree Id  l -> FibTree Tau r 
+                           -> FibTree Tau (l,r)
+      TTI :: FibTree Tau l -> FibTree Id r 
+                           -> FibTree Tau (l,r)
+      III :: FibTree Id  l -> FibTree Id r 
+                           -> FibTree Id (l,r)
+      TLeaf :: FibTree Tau Tau
+      ILeaf :: FibTree Id Id
 ```
-# Mathematical Linear Maps
+
+```haskell
+exampleTree :: FibTree Tau (Tau,(Tau,Tau))
+exampleTree = TTI (TLeaf) (ITT TLeaf TLeaf)
+```
+
+
+
+# Computation Using Anyons
+::: notes
+
+- Reassociating = Change of Basis
+
+:::
+- Use subspace of anyon space as qubits
+- Gates Built Using Braiding
+
+![](./circuit.png){ width=50% } ![](./anyon.png){ width=50% }
+
+# Computation Using Anyons (Cont.)
+
+- Linear maps
+   + Braiding = Physical Process. 
+
+     ![](./braid.jpg){ width=50% } 
+   + Reassociating = Change of Basis
+     ![](./fmove.png){ width=50% }
+
+# Implementing Linear Maps
+
 ::: notes
 Explciit matrix is very useful for inversion, other operations.
 But if the only thing you're going to do is matrix multiplication or
 matrix vector multiply, the functional representation is flexbiel
 identity matrix = id
 How do you know you are not squaring
-:::
-Concept
-$A (\alpha \vec{x} + \beta \vec{y}) = \alpha A \vec{x} + \beta A \vec{y}$
+
+$A(\alpha \vec{x} + \beta \vec{y}) = \alpha A \vec{x} +\beta A \vec{y}$
+don't have a seperate slide on
 
 Defining how linear maps act on a basis define how they act on any vector via linearity.
 
-# Implementing Linear Maps
+Hmm. I have a mixed message here
+I say functions suck because they have only one interface, evaluatation
 
-- Matrix a 
-- (Vec a -> Vec a)
+In
+
+  + Bad for anything except Matrix-Vector product.
+
+:::
+
+ 
+- Matrices
+  + `[[r]]`
+  + `V4 (V4 r)`
+  + `[((b,b),r)]`
+- What about `(Vec a -> Vec a)`?
+  + Excellent fit with Haskell
+  + Possibly very fast and flexible.
 
 ```haskell
 vfun :: Vec Double -> Vec Double
@@ -227,14 +360,22 @@ And the extended to an arbitrary vector by linearity.
 
 pure indexful functions can be lifted with fmap
 
-:::
 
-$A\hat{e}_i = \sum_j a_{ij}\hat{e}_j$
+Giry monad? Other names?
+
+For the purspoes of today, a monad is a pattern to abstract out common pipework happening between functions
+If you want to always check for errors, then the type system should force you to
+If a function can return a null value 
+
+It is repetitive
+Linear functions are the same way. The distribution of the linear function is pipework that will occur between
+ever function call.
 
 ```haskell
 matA Up   = [(Up,1)  ,  (Down,  1)]
 matA Down = [(Up,1)  ,  (Down, -1)]
 ```
+$A\hat{e}_i = \sum_j a_{ij}\hat{e}_j$
 
 ```haskell 
 instance Num b => Monad (W b) where
@@ -243,307 +384,65 @@ instance Num b => Monad (W b) where
 bs >>= f = [  |  (b, r) <- bs] 
 pure
 ```
-
-# Physics of Fibonacci Anyons
-::: notes
-Have a diagram of each junction type
 :::
 
-- Particles $I$ and $\tau$
-- Possible production rules
-
-# Gameplan
-describe the basis
-
-
-# GADTs
-::: notes
-Generalized Abstract Data Types
-Haskell Extension that let's you pick a signature for your constructors.
-Constructors are special function in that they are universal. The GADT maintains this universailty.
-You don't lose type information by applying a GADT constructor. It is recoverable via pattern matching.
-
-this is not a good example
-```haskell```
-data MyGadt s where
-    MyInt :: Int -> MyGadt Int
-    MyBool :: Bool -> MyGadt Bool
-```
-
-
-We can constrain our tree type using GADTs.
-:::
-
-
-
-
-
-
-# Implementation of Fibonacci Anyons
-
-::: notes
-Have a diagram of each junction type
-:::
-
-- Possible production rules
-- Particles $I$ and $\tau$
+- Monad pattern abstract away repetitive pipework
+  + Null returning functions
+  + Error handling
+- Vectors as a monad over the index type.
+- $A (\alpha \hat{x} + \beta \hat{y}) = \alpha (A \hat{x}) + \beta (A \hat{y})$
 
 ```haskell
-data Tau
-data Id
-data FibTree root leaves where
-   TTT :: FibTree Tau l -> FibTree Tau r -> FibTree Tau (l,r)
-   ITT :: FibTree Tau l -> FibTree Tau r -> FibTree Id (l,r) 
-   TIT :: FibTree Id l -> FibTree Tau r -> FibTree Tau (l,r)
-   TTI :: FibTree Tau l -> FibTree Id r -> FibTree Tau (l,r)
-   III :: FibTree Id l -> FibTree Id r -> FibTree Id (l,r)
-   TLeaf :: FibTree Tau Tau
-   ILeaf :: FibTree Id Id
+newtype Q b = Q [(b, Complex Double)]
+flip (>>=) :: (b -> Q a) -> (Q b -> Q a)
+return :: b -> Q b
 ```
 
 
+
+# Braiding & ReAssociation
+
+```haskell
+braid :: FibTree a (l,r) -> Q (FibTree a (r,l))
+braid (ITT l r) = W [(ITT r l,  cis $ 4 * pi / 5)] 
+braid (TTT l r) = W [(TTT r l,  (cis $ - 3 * pi / 5))]
+braid (TTI l r) = pure $ TIT r l
+braid (TIT l r) = pure $ TTI r l
+braid (III l r) = pure $ III r l
+```
+
+- Reassocation is similar
+
+```haskell
+fmove :: FibTree a (c,(d,e)) -> Q (FibTree a ((c,d),e))
+```
+
+# Final Thoughts
+
+- Greedy pursuit of performance is mind closing
+- Types are good
+  + Good For Design
+  + Good For Safety
+- Haskell is Good
+  + Useful in scientific contexts.
+- Further Work
+  + Category Theory for Anyons
+  + 2Vect
+
+# Thank You
 
 # References 
 
-https://arxiv.org/pdf/1705.04103.pdf - topological QM review
-Nielson and Chuang
-Quantum compute review
-Moggi and Wadler Monad originals?
-Probability monad original and Piponi articles
-Wikipedia
-Kitaev possibly
-Baez and Stay
-Preskill notes
-http://blog.sigfpe.com/2007/03/monads-vector-spaces-and-quantum.html
+- http://www.philipzucker.com/a-touch-of-topological-quantum-computation-in-haskell-pt-i/
+- http://www.philipzucker.com/a-touch-of-topological-quantum-computation-in-haskell-pt-ii-automating-drudgery/
+- http://www.philipzucker.com/a-touch-of-topological-computation-3-categorical-interlude/
+- http://www.theory.caltech.edu/people/preskill/ph229/
+- http://blog.sigfpe.com/2007/03/monads-vector-spaces-and-quantum.html
 
+# Bonus Mode: Category Theory
 
+class Category 
 
-my blog posts
+# Bonus Mode: Monoidal Categories
 
-http://www.philipzucker.com/a-touch-of-topological-quantum-computation-in-haskell-pt-i/
-http://www.philipzucker.com/a-touch-of-topological-quantum-computation-in-haskell-pt-ii-automating-drudgery/
-http://www.philipzucker.com/a-touch-of-topological-computation-3-categorical-interlude/
-
-
-
-# Quantum Gates
-::: notes
-get some pics here
-:::
-
-
-- Nand complete for classical circuits
-- Complete Set, CNot and 1-spin qubits 
-- Build big ole matrices by decomposing them into matrices acting of small kronecker pieces
-- Measurement (reading some current or voltage or something)
-![](./H_CNOTGate.png){ width=50% }
-
-# Topological Quantum Gates
-::: notes
-to the best of my understanding of physics, there is no reason to believe ANY particle
-you ever talk about is anything more than a quasiparticle. The distincting may be nonsensical
-
-Classical error correction and magnetic disks. Use the physics to do error correction for you
-Magnets are a phase of matter with intrinisic error correcting properties.
-
-What is topological about any of this?
-Topology is geometry mod wiggles, which leaves only the connectivity structure (well you can also abstract it into oblivion)
-Well only the topology of the braiding matters
-Also if you put these states of matter onto topological surfaces
-The ground state degeneracy depends on the topology of the surface (torii double torii spheres).
-This is a related thing. A particle is a certain kind of hole in the ground state. 
-There is not enough time to go into this and do I even really understand it?
-
-:::
-
-- Anyons - Quasiparticles.
-- If it smells and quacks like a duck
-- Baseballs, atoms, nuclei, electrons quarks?
-- Braiding of quasiparticles
-- Annihilating quasiparticles - Measurement
-
-## ![](./anyon.png){ width=50% }
-
-#Anyons
-::: notes
-They are a strange beast.
-Particle production trees
-Only certain kinds of particles can be made from others possibly in distinct ways
-The Vector space is labelled by a particle topology of production.
-Basis is given by differing inner labels.
-OPerations on this vector space can only be implemented by braiding particles.
-The space is protected.
-Gapped ground state degeneracy. e^E/kT 
-Topological quantum computation is implementing via the braiding
-Energetic protection. An energy barrier can prevent something from happening
-Thermal or perturbative. Ball in a well.
-comparison to bosons and fermions
-
-2 dimensional beasts
-
-3d is an unusually rich place
-
-Merely by exisiting.
-
-:::
-
-
-## Topological Quantum Computation
-::: notes
-we don't have the space to touch this as a seperate slide
-:::
-
-- Anyons. A funky vector space. We'll get to it
-- Implement Gates As Braiding of Anyons
-- Majorana, FQHE, 
-
-
-# Representable Functors
-Any functor that is isomorphic to `(->) a`
-Gibbons Naperian Functors
-Connects the Functor Vector to the Free Vector style
-One slide? For everything?
-
-# Functor Vectors
-::: notes
-Vectors as Functor on Scalars
-struct vectors
-Representable functors makes a bridge between the two concepts.
-
-Ok. I don't think we  have time to get into this.
-
-:::
-
-(,,,,,,) ntuples
-Kmett's linear package 
-Compose = Kron
-
-Product = Direct Sum
-Natural Transforomations
-Indexing into with `fmap`
-
-# Hey ho buddi
-here we is
-```haskell
-myprog :: IO ()
-myprog = println "foo"
-```
-- item one
-- item two
-
-pandoc -t beamer -V theme:Warsaw topo.md -o topo.pdf
-
-
-
-::: notes
-
-Who are the people I'm talking to. Do they know haskell?
-
-Cut the what is haskell slide? If I need space? Put the haskell slide earlier
-
-Give up the quantum computation? Don't want to be asked. 
-I don't really plan on getting into quantum computation
-It is spicy, 
-Implementing infrastructure
-Implementing the vector spaces of 
-Building
-Describing
-
-
-
-Factoring, breaking RSA
-physical simulations, chemicals, catalysts, pharmaceuticals ("analog" simulation easier?)
-Speedup of search algorithms (Grover)
-Adiabatic optimization
-HHL solving linear eqautions
-
-superposition and entanglement. explores exponentially sized spaces with tiny pinholes in and out
-
-probability ~ chance and correlation. 
-The difference is slight and subtle. Sampling is also a tiny pinhole.
-This may account for why there are so few quantum alogirhtms in the gap.
-
-Possible implementations - enough to shake a stick at
-Superocnding
-Ion trapp
-
-Quantum mechanics encodes temporal operations in Unitary matrices
-Probability encodes temporal operations into transition matrices (sum of all columns = 1)
-
-Problems 
-Decoherence
-
-Error Correction. 
-
-
-Deutsch-Jones
-QFFT
-Grovers
-Shors
-HHL
-
-
-It IS kind of neato. 
-Maybe there are lessons to be learned that apply to classical computers
-heuristics
-Maybe they will expand the frontier of mankinds infromation processing abilities in my lifetime
-
-Nielsen and Chuang
-
-
-Quipper
-
-Haskell
-Math Vectors 
-QM
-
-QC
-QM
-
-
-:::
-
-# Vectors
-::: notes
-
-Styles of vector
-
-I do like my distinction  of small medium and big vectors
-Not sure it is relevant.
-I guess my point that it is particularly relevant for quantum computation
-Dense is unacceptable
-Sparse isn't really right.
-There may be room for complicated things
-I do not have the solution,
-vsum :: [a] 
-smul s = fmap (* s)
-
-As much as it might make you sick, free your mind from performance.
-
-
-:::
-
-
-# Automating mechanical aspects
-::: notes
-not sure I have desire nor time to go into this.
-The work is kind of trash anyhow. 
-My typeclass style programming is not pleasant.
-:::
-
-# Category Theory
-
-Category: Objects Morphisms
-Monoidal Category
-Braided
-
-Point free programming exposes categorical underpinnings
-Vect
-Kliesli Arrow of Linear Monad
-Physical processes
- 
-Linear Types ~ Categories don't have to be cartesian (dup and proj).
-
-# 2 Vect anyons
-
-Since I'm not done with this, I am unlikely to talk about it
+# Bonus Mode: Braided Categories
