@@ -1,4 +1,33 @@
+# Abstract Vectors
+::: notes
+could just say the little big thing
+- Little - XY, XYZ, RGB
+- Medium - PDE, Images
+- Big - Many DOF Probability and Quantum
+- linear independence
+- $A (\alpha \vec{x} + \beta \vec{y}) = \alpha A \vec{x} + \beta A \vec{y}$
+
+Maybe I should just cut this slide
+What is it's point? I need it for flow.
+- The main thing that is solvable
+- Functions that commute with addition and scalar multiplication
+:::
+- Unifying Abstraction for many, many things
+- Linear Maps 
+  + Tabulatable
+  + Invertible
+  + Analyzable
+- Linear Algebra Powers all Numerics.
+- Computer Implementation?
+
 slide 1
+# Bonus Mode: Category Theory
+
+class Category 
+
+# Bonus Mode: Monoidal Categories
+
+# Bonus Mode: Braided Categories
 
 Hierarchy the bullets
 Quantum Computation

@@ -1,0 +1,3 @@
+A Touch of Topological Quantum Computation in Haskell
+
+Topological Quantum Computation is an field with many exciting problems and possible applications. It is rather complicated though. The programming language Haskell is a useful tool to help tame this complexity and design a systematic computational framework.

@@ -10,8 +10,7 @@ Where are we going today:
 
 - Quantum Computation
   + Quantum Mechanics
-  + Vectors
-  + Topological Quantum Compuation
+  + Topological Quantum Computation
   + Anyons
 - Haskell
   + Dense Vectors
@@ -67,6 +66,9 @@ familiar                       magic
 
 $S \rightarrow [0,1]$          $S \rightarrow \mathbb{C}$
 
+$p_i$                          $\psi_i$
+
+$T_{ij} = P(i | j)$            $U_{ij} = e^{\frac{iHt}{\hbar}}$
 
 $d^n$ scaling                  $d^n$ scaling
 
@@ -74,15 +76,13 @@ $d^n$ scaling                  $d^n$ scaling
 sampling                       measurement
 
 
-$p_i$                          $\psi_i$
 
-$T_{ij} = P(i | j)$            $U_{ij} = e^{\frac{iHt}{\hbar}}$
 
 ----------------------
 
 
 
-#  Anyons
+#  Topological Quantum Computation Anyons
 ::: notes
 
 Have a diagram of each junction type
@@ -107,13 +107,11 @@ grab a table of the fibonacci anyon rules.
    + Number and Types of particles.
 
 
-
-
 # Fibonacci Anyons
 
 - Fibonacci Anyons
   + Simple
-  + Universal
+  + Universal Quantum Computation
 - Two particle types: 
   + $\tau$
   + $I$
@@ -121,7 +119,7 @@ grab a table of the fibonacci anyon rules.
   + $\tau \rightarrow \tau \tau$
 
 
-# Basis Choice
+# Basis
 
 - Choice of basis = Production Tree Shape
 
@@ -132,9 +130,32 @@ grab a table of the fibonacci anyon rules.
 
 ![](./basis2.png){ width=50% }
 
-- How do I implement this monster?
+# Computation Using Anyons
+::: notes
 
+- Reassociating = Change of Basis
 
+:::
+- Use subspace of anyon space as qubits
+- Gates built using braiding
+
+![](./circuit.png){ width=50% } ![](./anyon.png){ width=50% }
+
+# Computation Using Anyons (Cont.)
+
+- Linear maps
+   + Braiding = Physical Process. 
+     ![](./braid.jpg){ width=50% } 
+   + Reassociating = Change of Basis
+     ![](./fmove.png){ width=50% }
+
+# How do I implement this monster on a computer I have?
+::: notes
+
+Well tough problems call for tough answers.
+
+:::
+![](./bigboy.png){ width=100% }
 
 # Haskell
 ::: notes
@@ -153,6 +174,7 @@ I'm sorry to say that if you don't know haskell, you still won't after I'm done 
 it is  still understandable at the psuedo code level
 
  intuitive language model
+ - Lazily evaluated
 :::
 
 - Typed Functional Programming Language
@@ -160,38 +182,14 @@ it is  still understandable at the psuedo code level
 - Optimizing Compiler
 - Pure 
 - Polymorphic
-- Lazily evaluated
-
 
 ```haskell
-factorial :: Num a => a -> a
+factorial :: (Eq a, Num a) => a -> a
 factorial 0 = 1
 factorial n = n * (factorial (n-1))
 ```
 
-# Abstract Vectors
-::: notes
-could just say the little big thing
-- Little - XY, XYZ, RGB
-- Medium - PDE, Images
-- Big - Many DOF Probability and Quantum
-- linear independence
-- $A (\alpha \vec{x} + \beta \vec{y}) = \alpha A \vec{x} + \beta A \vec{y}$
-
-Maybe I should just cut this slide
-What is it's point? I need it for flow.
-- The main thing that is solvable
-- Functions that commute with addition and scalar multiplication
-:::
-- Unifying Abstraction for many, many things
-- Linear Maps 
-  + Tabulatable
-  + Invertible
-  + Analyzable
-- Linear Algebra Powers all Numerics.
-- Computer Implementation?
-
-# Computer Implemented Vectors 
+# Dense Vectors 
 ::: notes
 
 Why do we make everything implciit, only in the mind of the programmer
@@ -218,11 +216,12 @@ Integer indexing. programs for computers vs humans
 
 # Free Vectors
 ::: notes
-
+- Make the type of the index part of the vector
 :::
 
-- Make the type of the index  part of the vector
+- You can make a vector space from any set.
 - Explicit type for index/basis
+  + Plays elegantly with Haskell
   + `b -> r`
   + `Map b r`
   + `[(b,r)]`
@@ -283,25 +282,7 @@ exampleTree = TTI (TLeaf) (ITT TLeaf TLeaf)
 
 
 
-# Computation Using Anyons
-::: notes
 
-- Reassociating = Change of Basis
-
-:::
-- Use subspace of anyon space as qubits
-- Gates Built Using Braiding
-
-![](./circuit.png){ width=50% } ![](./anyon.png){ width=50% }
-
-# Computation Using Anyons (Cont.)
-
-- Linear maps
-   + Braiding = Physical Process. 
-
-     ![](./braid.jpg){ width=50% } 
-   + Reassociating = Change of Basis
-     ![](./fmove.png){ width=50% }
 
 # Implementing Linear Maps
 
@@ -384,10 +365,16 @@ instance Num b => Monad (W b) where
 bs >>= f = [  |  (b, r) <- bs] 
 pure
 ```
+
+Monads are also used for things that aren't (immediate) problems in less principled languages
+State threading
+Mutation
+
+
 :::
 
 - Monad pattern abstract away repetitive pipework
-  + Null returning functions
+  + Null checking
   + Error handling
 - Vectors as a monad over the index type.
 - $A (\alpha \hat{x} + \beta \hat{y}) = \alpha (A \hat{x}) + \beta (A \hat{y})$
@@ -428,10 +415,11 @@ fmove :: FibTree a (c,(d,e)) -> Q (FibTree a ((c,d),e))
 - Further Work
   + Category Theory for Anyons
   + 2Vect
+  + Actually emulating an algorithm
 
 # Thank You
 
-# References 
+## References 
 
 - http://www.philipzucker.com/a-touch-of-topological-quantum-computation-in-haskell-pt-i/
 - http://www.philipzucker.com/a-touch-of-topological-quantum-computation-in-haskell-pt-ii-automating-drudgery/
@@ -439,10 +427,3 @@ fmove :: FibTree a (c,(d,e)) -> Q (FibTree a ((c,d),e))
 - http://www.theory.caltech.edu/people/preskill/ph229/
 - http://blog.sigfpe.com/2007/03/monads-vector-spaces-and-quantum.html
 
-# Bonus Mode: Category Theory
-
-class Category 
-
-# Bonus Mode: Monoidal Categories
-
-# Bonus Mode: Braided Categories
