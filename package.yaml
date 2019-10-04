@@ -30,6 +30,7 @@ library:
   - diagrams
   - diagrams-lib
   - diagrams-svg
+  - ad
 
 executables:
   fib-anyon-exe:
