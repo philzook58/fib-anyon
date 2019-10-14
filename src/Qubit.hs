@@ -168,10 +168,10 @@ leftUnitor :: Identity *** f ~> f
 leftUnitor = runIdentity . getCompose
 
 -- should be coerce. Confusing role problems
-assoc :: Functor f => ((f *** g) *** h) ~> (f *** (g *** h))
+assoc :: Functor f => (Kron (Kron f g) h) ~> (Kron f (Kron g h))
 assoc = Compose . (fmap Compose) . getCompose . getCompose
 
-assoc' :: Functor f =>  (f *** (g *** h)) ~> ((f *** g) *** h)
+assoc' :: Functor f =>  (Kron f (Kron g h)) ~> (Kron (Kron f g) h)
 assoc' (Compose x)  = Compose $ Compose $ (fmap getCompose x) 
 
 
@@ -282,13 +282,43 @@ No, but saying we always have direct access to the scalar isn't right.
   (forall k. Additive k => Kron f k a -> Kron f' k a) -> (forall k. Additive k => Kron g k a -> Kron g' k a) -> (Kron (Kron f g) k') a -> (Kron (Kron f' g') k') a
 -}
 
+type Qubit = V2
+
 kron'' :: (Additive f, Additive g, Additive k, Additive f', Additive g') => 
   LinOp1 f f' a -> LinOp1 g g' a -> Kron (Kron f g) k a -> Kron (Kron f' g') k a
 kron'' lf lg fgk = let v = (Qubit.assoc fgk) in Qubit.assoc' (Compose $ fmap lg $ getCompose (lf v))
 
+sigx' :: LinOp1 Qubit Qubit C 
+sigx' (Compose (V2 up down)) = Compose $ V2 down up  
+
+sigz' :: LinOp1 Qubit Qubit C 
+sigz' (Compose (V2 up down)) = Compose  $ V2 up ((-1) *^ down) 
+
+sigy' :: LinOp1 Qubit Qubit C 
+sigy' (Compose (V2 up down)) = Compose $ V2 ((-i) *^ down) (i *^ up) where i = 0 :+ 1
+
+swap' :: (Traversable f, Applicative g) => LinOp1 (Kron f g) (Kron g f) a 
+swap' (Compose (Compose fgk)) = Compose $ Compose $ sequenceA fgk 
+
+cnot :: LinOp1 (Kron Qubit Qubit) (Kron Qubit Qubit) a 
+cnot (Compose (Compose (V2 (V2 up1 down1) v))) = Compose $ Compose $ V2 (V2 down1 up1) v
+
+phase :: Double -> LinOp1 Qubit Qubit C
+phase phi (Compose (V2 up down)) = Compose $ V2 up ((cis phi) *^ down)
+
+mtest :: LinOp1 (Kron Qubit Qubit) (Kron Qubit Qubit) C 
+mtest = (left sigx') . (left sigy') . (right sigz') . swap'
+
+left :: (Additive f, Additive k, Additive g) => LinOp1 f g a -> LinOp1 (Kron f k) (Kron g k) a
+left l = kron'' l id -- Qubit.assoc' . l . Qubit.assoc 
+
+right :: (Additive k, Additive f, Additive g) => LinOp1 f g a -> LinOp1 (Kron k f) (Kron k g) a
+right l = kron'' id l -- (Compose (Compose fkk)) = Compose $ Compose $ (fmap (getCompose . l . Compose) fkk)
 
 leftUnit :: Kron V1 (Kron f k) a -> Kron f k a
 leftUnit (Compose (V1 x)) = x
+
+
 {-
 (f a -> g a) is a natural transfromation
 (Fractional a => f a -> g a) is a numerical transfromation
